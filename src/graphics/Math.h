@@ -54,6 +54,7 @@ ZeniMax Media Inc., Suite 120, Rockville, Maryland 20850 USA.
 #include <boost/numeric/conversion/cast.hpp>
 
 #include <glm/gtx/norm.hpp>
+#include <glm/gtx/spline.hpp>
 
 #include "graphics/GraphicsTypes.h"
 #include "graphics/data/Mesh.h"
@@ -270,6 +271,9 @@ inline long PointInUnderCylinder(const Cylinder & cyl, const Vec3f & pt) {
 	
 	return 0;
 }
+
+
+
 
 #ifdef ARX_DEBUG
 #define checked_range_cast boost::numeric_cast

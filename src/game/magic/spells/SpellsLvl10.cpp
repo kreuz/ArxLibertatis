@@ -175,6 +175,11 @@ void MassLightningStrikeSpell::Update() {
 }
 
 
+ControlTargetSpell::ControlTargetSpell()
+	: tex_mm(NULL)
+	, fTrail(0)
+{ }
+
 bool ControlTargetSpell::CanLaunch()
 {
 	if(!ValidIONum(m_target)) {
@@ -317,39 +322,19 @@ void ControlTargetSpell::Update() {
 	Vec3f lastpos = pathways[0];
 	
 	for(int i = 0; i < 9; i++) {
-		int kp		= i;
-		int kpprec	= (i > 0) ? kp - 1 : kp ;
-		int kpsuiv	= kp + 1 ;
-		int kpsuivsuiv = (i < (9 - 2)) ? kpsuiv + 1 : kpsuiv;
-
+		
+		const Vec3f v1 = pathways[std::max(0, i - 1)];
+		const Vec3f v2 = pathways[i];
+		const Vec3f v3 = pathways[i + 1];
+		const Vec3f v4 = pathways[std::min(9, i + 2)];
+		
 		for(int toto = 1; toto < n; toto++) {
 			if(fTrail < i * n + toto)
 				break;
 
 			float t = toto * delta;
-
-			float t1 = t;
-			float t2 = t1 * t1 ;
-			float t3 = t2 * t1 ;
-			float f0 = 2.f * t3 - 3.f * t2 + 1.f ;
-			float f1 = -2.f * t3 + 3.f * t2 ;
-			float f2 = t3 - 2.f * t2 + t1 ;
-			float f3 = t3 - t2 ;
-
-			float val = pathways[kpsuiv].x;
-			float p0 = 0.5f * (val - pathways[kpprec].x) ;
-			float p1 = 0.5f * (pathways[kpsuivsuiv].x - pathways[kp].x) ;
-			v.x = f0 * pathways[kp].x + f1 * val + f2 * p0 + f3 * p1 ;
-
-			val = pathways[kpsuiv].y ;
-			p0 = 0.5f * (val - pathways[kpprec].y) ;
-			p1 = 0.5f * (pathways[kpsuivsuiv].y - pathways[kp].y) ;
-			v.y = f0 * pathways[kp].y + f1 * val + f2 * p0 + f3 * p1 ;
-
-			val = pathways[kpsuiv].z ;
-			p0 = 0.5f * (val - pathways[kpprec].z) ;
-			p1 = 0.5f * (pathways[kpsuivsuiv].z - pathways[kp].z) ;
-			v.z = f0 * pathways[kp].z + f1 * val + f2 * p0 + f3 * p1 ;
+			
+			v = glm::catmullRom(v1, v2, v3, v4, t);
 			
 			newpos = v;
 			
