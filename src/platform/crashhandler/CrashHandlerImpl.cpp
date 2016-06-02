@@ -59,20 +59,29 @@ CrashHandlerImpl::~CrashHandlerImpl() {
 
 void CrashHandlerImpl::processCrash(const std::string & sharedMemoryName) {
 	
-	m_SharedMemoryName = sharedMemoryName;
-	
-	// Create a shared memory object.
-	m_SharedMemory = bip::shared_memory_object(bip::open_only, m_SharedMemoryName.c_str(),
-	                                           bip::read_write);
-	
-	// Map the whole shared memory in this process
-	m_MemoryMappedRegion = bip::mapped_region(m_SharedMemory, bip::read_write);
-	
-	// Our SharedCrashInfo will be stored in this shared memory.
-	m_pCrashInfo = reinterpret_cast<CrashInfo *>(m_MemoryMappedRegion.get_address());
-	m_textLength = std::find(m_pCrashInfo->description, m_pCrashInfo->description
-	                         + boost::size(m_pCrashInfo->description), '\0')
-	               - m_pCrashInfo->description;
+	try {
+		
+		m_SharedMemoryName = sharedMemoryName;
+		
+		// Create a shared memory object.
+		m_SharedMemory = bip::shared_memory_object(bip::open_only, m_SharedMemoryName.c_str(),
+		                                           bip::read_write);
+		
+		// Map the whole shared memory in this process
+		m_MemoryMappedRegion = bip::mapped_region(m_SharedMemory, bip::read_write);
+		
+		// Our SharedCrashInfo will be stored in this shared memory.
+		m_pCrashInfo = reinterpret_cast<CrashInfo *>(m_MemoryMappedRegion.get_address());
+		if(m_pCrashInfo) {
+			m_textLength = std::find(m_pCrashInfo->description, m_pCrashInfo->description
+			                         + boost::size(m_pCrashInfo->description), '\0')
+			               - m_pCrashInfo->description;
+		}
+		
+	} catch(...) {
+		// Unexpected error
+		m_pCrashInfo = NULL;
+	}
 	
 	processCrash();
 	
@@ -265,15 +274,24 @@ void CrashHandlerImpl::processCrash() {
 	// The crash reporter is not available or failed to start - provide our own dialog
 	{
 		std::ostringstream oss;
-		oss <<"Arx Libertatis crashed!\n\n";
-		oss << "Please install arxcrashreporter or manually report the crash to "
-		    << url::bug_report << "\n\n";
-		oss << "Include the files contained in the following directory in your report:\n";
-		oss << " " << m_crashReportDir;
+		oss << "Arx Libertatis crashed!\n\n";
+		if(m_pCrashInfo) {
+			oss << "Please install arxcrashreporter or manually report the crash to "
+			    << url::bug_report << "\n\n";
+			oss << "Include the files contained in the following directory in your report:\n";
+			oss << " " << m_crashReportDir;
+		} else {
+			oss << "Additionally, we encountered an unexpected error while collecting"
+			       " crash information!\n\n";
+		}
 		std::cout << "\n\n" << oss.str() << '\n';
-		oss << "\n\nClick OK to open that directory now.";
+		if(m_pCrashInfo) {
+			oss << "\n\nClick OK to open that directory now.";
+		}
 		platform::showErrorDialog(oss.str(), "Fatal Error - " + arx_version);
-		platform::launchDefaultProgram(m_crashReportDir.string());
+		if(m_pCrashInfo) {
+			platform::launchDefaultProgram(m_crashReportDir.string());
+		}
 	}
 	
 }
