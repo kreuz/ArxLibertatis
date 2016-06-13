@@ -418,26 +418,16 @@ EERIEPOLY * EEIsUnderWater(const Vec3f & pos) {
 
 bool GetTruePolyY(const EERIEPOLY * ep, const Vec3f & pos, float * ret) {
 	
+	Vec3f n = glm::cross(ep->v[1].p - ep->v[0].p, ep->v[2].p - ep->v[0].p);
+	if(n.y == 0.f) {
+		return false;
+	}
 	
-	Vec3f s21 = ep->v[1].p - ep->v[0].p;
-	Vec3f s31 = ep->v[2].p - ep->v[0].p;
+	float y = glm::dot(ep->v[0].p - Vec3f(pos.x, 0.f, pos.z), n) / n.y;
 	
-	Vec3f n;
-	n.y = (s21.z * s31.x) - (s21.x * s31.z);
-	if (n.y == 0.f) return false; 
-	n.x = (s21.y * s31.z) - (s21.z * s31.y);
-	n.z = (s21.x * s31.y) - (s21.y * s31.x);
+	// Perhaps we can remove the clamp... (need to test)
+	*ret = glm::clamp(y, ep->min.y, ep->max.y);
 	
-	// uses s21.x instead of d
-	s21.x = ep->v[0].p.x * n.x + ep->v[0].p.y * n.y + ep->v[0].p.z * n.z;
-	
-	s21.x = (s21.x - (n.x * pos.x) - (n.z * pos.z)) / n.y;
-	
-	// Perhaps we can remove the two following lines... (need to test)
-	if (s21.x < ep->min.y) s21.x = ep->min.y;
-	else if (s21.x > ep->max.y) s21.x = ep->max.y;
-	
-	*ret = s21.x;
 	return true;
 }
 

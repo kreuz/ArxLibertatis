@@ -916,7 +916,7 @@ public:
 		{
 			PanelWidget * panel = new PanelWidget;
 			std::string szMenuText = getLocalised("system_menus_options_interface_cinematic_widescreen_mode",
-			                                      "Cinematic mode");
+			                                      "Cinematics mode");
 			szMenuText += " ";
 			TextWidget * txt = new TextWidget(BUTTON_INVALID, hFontMenu, szMenuText, Vec2f(20, 0));
 			txt->SetCheckOff();
@@ -1735,7 +1735,7 @@ void MainMenu::init()
 	}
 	pos.y += yOffset;
 	
-	std::string version = arx_version;
+	std::string version = arx_name + " " + arx_version;
 	if(!arx_release_codename.empty()) {
 		version += " \"";
 		version += arx_release_codename;

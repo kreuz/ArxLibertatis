@@ -243,7 +243,7 @@ include(CheckTypeSize)
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake") # For custom cmake modules
 
 include(VersionString)
-set(version_names VERSION DATA_VERSION IO_LIBRARY_ABI_VERSION)
+set(version_names VERSION ICON_NAME DATA_VERSION IO_LIBRARY_ABI_VERSION)
 parse_version_file("${version_names}" "VERSION")
 if(VERSION_ERROR OR DATA_VERSION_ERROR OR IO_LIBRARY_ABI_VERSION_ERROR)
 	message(WARNING "Error parsing version file!")
@@ -1211,7 +1211,7 @@ if(WIN32)
 		version_file("${VERSION_RC_TEMPLATE}"
 		             "${rc_file}" "${rc_sources}" ".git" "${rc_defines}")
 	endfunction()
-	create_version_resource(arx "Arx Libertatis")
+	create_version_resource(arx "${VERSION_NAME}")
 	list(APPEND ARX_SOURCES ${arx-version.rc})
 endif()
 
@@ -1259,7 +1259,7 @@ if(ARX_HAVE_CRASHREPORTER)
 	
 	if(WIN32)
 		list(APPEND arxcrashreporter_SOURCES ${arx-libertatis-icon.rc})
-		create_version_resource(arxcrashreporter "Arx Libertatis Crash Reporter")
+		create_version_resource(arxcrashreporter "${VERSION_NAME} Crash Reporter")
 		list(APPEND arxcrashreporter_SOURCES ${arxcrashreporter-version.rc})
 	endif()
 	
@@ -1361,7 +1361,7 @@ if(ARX_HAVE_PROFILER)
 	
 	if(WIN32)
 		list(APPEND arxprofiler_SOURCES ${arx-libertatis-icon.rc})
-		create_version_resource(arxprofiler "Arx Libertatis Profiler")
+		create_version_resource(arxprofiler "${VERSION_NAME} Profiler")
 		list(APPEND arxprofiler_SOURCES ${arxprofiler-version.rc})
 	endif()
 	
@@ -1440,7 +1440,7 @@ if(BUILD_TOOLS)
 	)
 	
 	if(WIN32)
-		create_version_resource(arxsavetool "Arx Libertatis Save File Tool")
+		create_version_resource(arxsavetool "${VERSION_NAME} Save File Tool")
 		list(APPEND arxsavetool_SOURCES ${arxsavetool-version.rc})
 	endif()
 	
@@ -1459,7 +1459,7 @@ if(BUILD_TOOLS)
 	)
 	
 	if(WIN32)
-		create_version_resource(arxunpak "Arx Libertatis PAK File Unpacker")
+		create_version_resource(arxunpak "${VERSION_NAME} PAK File Unpacker")
 		list(APPEND arxunpak_SOURCES ${arxunpak-version.rc})
 	endif()
 	
@@ -1569,7 +1569,7 @@ if(NOT WIN32 AND NOT MACOSX)
 	find_program(DESKTOP_FILE_VALIDATE desktop-file-validate)
 	
 	if(DESKTOP_FILE_VALIDATE)
-		get_filename_component(ABS_DESKTOP_FILE data/icons/arx-libertatis.desktop ABSOLUTE)
+		get_filename_component(ABS_DESKTOP_FILE "data/icons/${ICON_NAME}.desktop" ABSOLUTE)
 		add_custom_target(
 			validate_desktop_file ALL
 			"${DESKTOP_FILE_VALIDATE}" "${ABS_DESKTOP_FILE}" VERBATIM
@@ -1577,7 +1577,7 @@ if(NOT WIN32 AND NOT MACOSX)
 		)
 	endif()
 	
-	install(FILES data/icons/arx-libertatis.desktop DESTINATION "${APPDIR}" OPTIONAL)
+	install(FILES "data/icons/${ICON_NAME}.desktop" DESTINATION "${APPDIR}" OPTIONAL)
 	
 endif()
 
