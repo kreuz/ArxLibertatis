@@ -34,10 +34,12 @@
 #include "scene/GameSound.h"
 #include "input/Input.h"
 #include "io/log/Logger.h"
-
+#include "platform/Time.h"
 
 static const long MAX_POINTS(200);
 static Vec2s plist[MAX_POINTS];
+
+static const int POINT_ADD_INTERVAL_MS(30);
 
 Rune SpellSymbol[MAX_SPELL_SYMBOLS];
 
@@ -186,11 +188,19 @@ void spellRecognitionPointsReset() {
 
 // Adds a 2D point to currently drawn spell symbol
 void ARX_SPELLS_AddPoint(const Vec2s & pos) {
+	static u32 prevTime = 0;
+	u32 currTime = platform::getTimeMs();
+	
+	if((currTime - prevTime) < POINT_ADD_INTERVAL_MS){
+		return;
+	}
+	
 	plist[CurrPoint] = pos;
 	CurrPoint++;
-	if(CurrPoint >= MAX_POINTS) {
+	if(CurrPoint >= MAX_POINTS){
 		CurrPoint = MAX_POINTS - 1;
 	}
+	prevTime = currTime;
 }
 
 
