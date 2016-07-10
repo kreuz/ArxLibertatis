@@ -254,7 +254,7 @@ void ARX_SPELLS_Analyse() {
 	Vec2f impPoints[MAX_POINTS];
 	unsigned int impIndex = 0;
 	
-	const float TOLERANCE(0.12f);
+	const float TOLERANCE(0.20f);
 	
 	//calculate tolerance based on the overall size of the drawing
 	int maxX = plist[0].x;
@@ -429,6 +429,7 @@ void ARX_SPELLS_AnalyseSYMBOL() {
 		case 12369  :
 		case 1236   :
 		case 1369   :
+		case 123    :
 			handleCheatRuneDetection(CheatRune_KAOM);
 			handleRuneDetection(RUNE_KAOM);
 			break;
