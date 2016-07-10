@@ -383,52 +383,29 @@ void ARX_SPELLS_AnalyseSYMBOL() {
 		
 		// COSUM
 		case 62148  :
-		case 632148 :
-		case 62498  :
-		case 62748  :
 		case 6248   :
 			handleRuneDetection(RUNE_COSUM);
 			break;
 		// COMUNICATUM
-		case 632426 :
 		case 627426 :
-		case 634236 :
-		case 624326 :
 		case 62426  :
+		case 621426 :
 			handleRuneDetection(RUNE_COMUNICATUM);
 			break;
 		// FOLGORA
-		case 9823   :
-		case 9232   :
-		case 983    :
-		case 963    :
-		case 923    :
-		case 932    :
 		case 93     :
 			handleRuneDetection(RUNE_FOLGORA);
 			break;
 		// SPACIUM
 		case 42368  :
-		case 42678  :
-		case 42698  :
 		case 4268   :
 			handleRuneDetection(RUNE_SPACIUM);
 			break;
 		// TERA
-		case 9826   :
-		case 92126  :
-		case 9264   :
-		case 9296   :
 		case 926    :
 			handleRuneDetection(RUNE_TERA);
 			break;
 		// CETRIUS
-		case 286   :
-		case 3286  :
-		case 23836 :
-		case 38636 :
-		case 2986  :
-		case 2386  :
 		case 386   :
 			handleRuneDetection(RUNE_CETRIUS);
 			break;
@@ -438,36 +415,30 @@ void ARX_SPELLS_AnalyseSYMBOL() {
 			handleRuneDetection(RUNE_RHAA);
 			break;
 		// FRIDD
-		case 98362	:
-		case 8362	:
-		case 8632	:
-		case 8962	:
 		case 862	:
 			handleRuneDetection(RUNE_FRIDD);
 			break;
 		// KAOM
-		case 41236	:
-		case 23		:
-		case 236	:
-		case 2369	:
-		case 136	:
-		case 12369	:
-		case 1236	:
+		case 4136   :
+		case 4123   :
+		case 4236   :
+		case 41236  :
+		case 412369 :
+		case 236    :
+		case 136    :
+		case 12369  :
+		case 1236   :
+		case 1369   :
 			handleCheatRuneDetection(CheatRune_KAOM);
 			handleRuneDetection(RUNE_KAOM);
 			break;
 		// STREGUM
-		case 82328 :
 		case 8328  :
-		case 2328  :
-		case 8938  :
 		case 8238  :
 		case 838   :
 			handleRuneDetection(RUNE_STREGUM);
 			break;
 		// MORTE
-		case 628   :
-		case 621   :
 		case 62    :
 			handleRuneDetection(RUNE_MORTE);
 			break;
@@ -478,15 +449,6 @@ void ARX_SPELLS_AnalyseSYMBOL() {
 			handleRuneDetection(RUNE_TEMPUS);
 			break;
 		// MOVIS
-		case 6316:
-		case 61236:
-		case 6146:
-		case 61216:
-		case 6216:
-		case 6416:
-		case 62126:
-		case 61264:
-		case 6126:
 		case 6136:
 		case 616: 
 			handleRuneDetection(RUNE_MOVIS);
@@ -502,19 +464,10 @@ void ARX_SPELLS_AnalyseSYMBOL() {
 			handleRuneDetection(RUNE_AAM);
 			break;
 		// YOK
-		case 412369:
-		case 2687:
-		case 2698:
-		case 2638:
-		case 26386:
-		case 2368:
-		case 2689:
 		case 268:
 			handleRuneDetection(RUNE_YOK);
 			break;
 		// TAAR
-		case 6236:
-		case 6264:
 		case 626:
 			handleRuneDetection(RUNE_TAAR);
 			break;
@@ -525,19 +478,11 @@ void ARX_SPELLS_AnalyseSYMBOL() {
 			handleRuneDetection(RUNE_MEGA);
 			break;
 		// VISTA
-		case 3614:
-		case 361:
-		case 341:
-		case 3212:
-		case 3214:
-		case 312:
-		case 314:
 		case 321:
 		case 31:
 			handleRuneDetection(RUNE_VISTA);
 			break;
 		// VITAE
-		case 698:
 		case 68:
 			handleRuneDetection(RUNE_VITAE);
 			break;
@@ -547,67 +492,14 @@ void ARX_SPELLS_AnalyseSYMBOL() {
 		case 238:
 		case 2398:
 		case 23898:
-		case 236987:
 		case 23698:
 			handleCheatRuneDetection(CheatRune_U);
 			goto failed; 
-		case 2382398:
 		case 2829:
-		case 23982398:
-		case 39892398:
-		case 2398938:
-		case 28239898:
-		case 238982398:
-		case 238923898:
-		case 28982398:
-		case 3923989:
-		case 292398:
-		case 398329:
-		case 38923898:
-		case 2398289:
-		case 289823898:
-		case 2989238:
-		case 29829:
-		case 2393239:
-		case 38239:
-		case 239829:
-		case 2898239:
-		case 28982898:
-		case 389389:
-		case 3892389:
-		case 289289:
-		case 289239:
-		case 239289:
-		case 2989298:
-		case 2392398:
-		case 238929:
-		case 28923898:
 		case 2929:
-		case 2398298:
-		case 239823898:
-		case 28238:
-		case 2892398:
-		case 28298:
-		case 298289:
-		case 38929:
-		case 289298989:
-		case 23892398:
-		case 238239:
-		case 29298:
-		case 2329298:
-		case 232389829:
-		case 2389829:
-		case 239239:
-		case 282398:
-		case 2389239:
-		case 2929898:
-		case 3292398:
-		case 23923298:
-		case 23898239:
-		case 3232929:
-		case 2982398:
-		case 238298:
 		case 3939:
+		case 2939:
+		case 3929:
 			handleCheatRuneDetection(CheatRune_W);
 			goto failed; 
 		case 161:
@@ -615,67 +507,27 @@ void ARX_SPELLS_AnalyseSYMBOL() {
 		case 1261:
 			handleCheatRuneDetection(CheatRune_S);
 			goto failed;
-		case 83614:
-		case 8361:
-		case 8341:
-		case 83212:
-		case 83214:
-		case 8312:
-		case 8314:
-		case 8321:
 		case 831:
-		case 82341:
 		case 834:
-		case 823:
-		case 8234:
-		case 8231:
 			handleCheatRuneDetection(CheatRune_P);
 			goto failed;
 		case 83692:
-		case 823982:
-		case 83982:
-		case 82369892:
-		case 82392:
-		case 83892:
-		case 823282:
 		case 8392:
 			handleCheatRuneDetection(CheatRune_M);
 			goto failed;
-		case 98324:
-		case 92324:
-		case 89324:
-		case 9324:
-		case 9892324:
-		case 9234:
 		case 934:
 			handleCheatRuneDetection(CheatRune_A);
 			goto failed;
-		case 3249:
-		case 2349:
-		case 323489:
-		case 23249:
-		case 3489:
-		case 32498:
 		case 349:
 			handleCheatRuneDetection(CheatRune_X);
 			goto failed;
 		case 26:
 			handleCheatRuneDetection(CheatRune_26);
 			goto failed;
-		case 9232187:
-		case 93187:
-		case 9234187:
-		case 831878:
-		case 923187:
-		case 932187:
-		case 93217:
 		case 9317:
 			handleCheatRuneDetection(CheatRune_O);
 			goto failed;
-		case 82313:
 		case 8343:
-		case 82343:
-		case 83413:
 		case 8313:
 			handleCheatRuneDetection(CheatRune_R);
 			goto failed;
