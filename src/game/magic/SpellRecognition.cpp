@@ -218,20 +218,6 @@ SpellType GetSpellId(const std::string & spell) {
 }
 
 extern std::string LAST_FAILED_SEQUENCE;
-enum ARX_SPELLS_RuneDirection
-{
-	AUP,
-	AUPRIGHT,
-	ARIGHT,
-	ADOWNRIGHT,
-	ADOWN,
-	ADOWNLEFT,
-	ALEFT,
-	AUPLEFT
-};
-
-
-
 
 
 static SpellType getSpell(const Rune symbols[MAX_SPELL_SYMBOLS]) {
@@ -252,13 +238,19 @@ static SpellType getSpell(const Rune symbols[MAX_SPELL_SYMBOLS]) {
 	return def->spell;
 }
 
+static const char ADOWNLEFT('1');
+static const char ADOWN('2');
+static const char ADOWNRIGHT('3');
+static const char ALEFT('4');
+static const char ARIGHT('6');
+static const char AUPLEFT('7');
+static const char AUP('8');
+static const char AUPRIGHT('9');
 
 
 void ARX_SPELLS_Analyse() {
 	
-	unsigned char dirs[MAX_POINTS];
-	unsigned char lastdir = 255;
-	long cdir = 0;
+	SpellMoves.clear();
 
 	for(long i = 1; i < CurrPoint ; i++) {
 		
@@ -268,25 +260,27 @@ void ARX_SPELLS_Analyse() {
 			
 			float a = std::abs(d.x);
 			float b = std::abs(d.y);
+
+			unsigned char lastdir = SpellMoves.back();
 			
 			if(b != 0.f && a / b > 0.4f && a / b < 2.5f) {
 				// Diagonal movemement.
 				
 				if(d.x < 0 && d.y < 0) {
 					if(lastdir != ADOWNRIGHT) {
-						lastdir = dirs[cdir++] = ADOWNRIGHT;
+						SpellMoves += ADOWNRIGHT;
 					}
 				} else if(d.x > 0 && d.y < 0) {
 					if(lastdir != ADOWNLEFT) {
-						lastdir = dirs[cdir++] = ADOWNLEFT;
+						SpellMoves += ADOWNLEFT;
 					}
 				} else if(d.x < 0 && d.y > 0) {
 					if(lastdir != AUPRIGHT) {
-						lastdir = dirs[cdir++] = AUPRIGHT;
+						SpellMoves += AUPRIGHT;
 					}
 				} else if(d.x > 0 && d.y > 0) {
 					if(lastdir != AUPLEFT) {
-						lastdir = dirs[cdir++] = AUPLEFT;
+						SpellMoves += AUPLEFT;
 					}
 				}
 				
@@ -295,11 +289,11 @@ void ARX_SPELLS_Analyse() {
 				
 				if(d.x < 0) {
 					if(lastdir != ARIGHT) {
-						lastdir = dirs[cdir++] = ARIGHT;
+						SpellMoves += ARIGHT;
 					}
 				} else {
 					if(lastdir != ALEFT) {
-						lastdir = dirs[cdir++] = ALEFT;
+						SpellMoves += ALEFT;
 					}
 				}
 				
@@ -308,57 +302,13 @@ void ARX_SPELLS_Analyse() {
 				
 				if(d.y < 0) {
 					if(lastdir != ADOWN) {
-						lastdir = dirs[cdir++] = ADOWN;
+						SpellMoves += ADOWN;
 					}
 				} else {
 					if(lastdir != AUP) {
-						lastdir = dirs[cdir++] = AUP;
+						SpellMoves += AUP;
 					}
 				}
-			}
-		}
-	}
-
-	SpellMoves.clear();
-	
-	if ( cdir > 0 )
-	{
-
-		for (long i = 0 ; i < cdir ; i++ )
-		{
-			switch ( dirs[i] )
-			{
-				case AUP:
-					SpellMoves += "8"; //uses PAD values
-					break;
-
-				case ADOWN:
-					SpellMoves += "2";
-					break;
-
-				case ALEFT:
-					SpellMoves += "4";
-					break;
-
-				case ARIGHT:
-					SpellMoves += "6";
-					break;
-
-				case AUPRIGHT:
-					SpellMoves += "9";
-					break;
-
-				case ADOWNRIGHT:
-					SpellMoves += "3";
-					break;
-
-				case AUPLEFT:
-					SpellMoves += "7";
-					break;
-
-				case ADOWNLEFT:
-					SpellMoves += "1";
-					break;
 			}
 		}
 	}
