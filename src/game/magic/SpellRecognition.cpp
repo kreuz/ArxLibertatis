@@ -23,6 +23,7 @@
 #include <string>
 
 #include <boost/lexical_cast.hpp>
+#include <glm/gtx/vector_angle.hpp>
 
 #include "core/Config.h"
 #include "game/Equipment.h"
@@ -250,67 +251,112 @@ static const char AUPRIGHT('9');
 
 void ARX_SPELLS_Analyse() {
 	
+	Vec2f impPoints[MAX_POINTS];
+	unsigned int impIndex = 0;
+	
+	const float TOLERANCE(0.12f);
+	
+	//calculate tolerance based on the overall size of the drawing
+	int maxX = plist[0].x;
+	int maxY = plist[0].y;
+	int minX = plist[0].x;
+	int minY = plist[0].y;
+	float currTolerance = 0;
+	for(long i = 1; i < CurrPoint; i++) {
+		Vec2s currentItem = plist[i];
+		maxX = glm::max(maxX, (int)plist[i].x);
+		maxY = glm::max(maxY, (int)plist[i].y);
+		minX = glm::min(minX, (int)plist[i].x);
+		minY = glm::min(minY, (int)plist[i].y);
+	}
+	currTolerance = ((maxX - minX + maxY - minY) / 2)*TOLERANCE;
+	
+	impPoints[impIndex++] = plist[0];
+	Vec2s lastImp = plist[0];
+	
+	for(long i = 2; i < CurrPoint; i++) {
+		Vec2f prevSegNorm, nextSegNorm;
+		Vec2s thisPoint = plist[i - 1];
+		Vec2s nextPoint = plist[i];
+		
+		float distance = glm::length(Vec2f(lastImp - thisPoint));
+		prevSegNorm = glm::normalize(Vec2f(lastImp - thisPoint));
+		nextSegNorm = glm::normalize(Vec2f(nextPoint - thisPoint));
+		
+		if(distance > currTolerance) {
+			float angle2 = glm::angle(prevSegNorm, nextSegNorm);
+			//if significant angle change (< 155 deg)
+			if(angle2 < 2.7f) {
+				lastImp = thisPoint;
+				impPoints[impIndex++] = thisPoint;
+			}
+		}
+	}
+	
+	//push the last point
+	if(glm::length(Vec2f(plist[CurrPoint - 1] - lastImp)) > currTolerance) {
+		impPoints[impIndex++] = plist[CurrPoint - 1];
+	}
+	
 	SpellMoves.clear();
-
-	for(long i = 1; i < CurrPoint ; i++) {
+	
+	for(unsigned int i = 1; i < impIndex; i++) {
 		
-		Vec2f d = Vec2f(plist[i-1] - plist[i]);
+		Vec2f d = Vec2f(impPoints[i - 1] - impPoints[i]);
 		
-		if(glm::length2(d) > 100) {
+		float a = std::abs(d.x);
+		float b = std::abs(d.y);
+		
+		unsigned char lastdir = SpellMoves.back();
 			
-			float a = std::abs(d.x);
-			float b = std::abs(d.y);
-
-			unsigned char lastdir = SpellMoves.back();
-			
-			if(b != 0.f && a / b > 0.4f && a / b < 2.5f) {
-				// Diagonal movemement.
+		if(b != 0.f && a / b > 0.4f && a / b < 2.5f) {
+			// Diagonal movemement.
 				
-				if(d.x < 0 && d.y < 0) {
-					if(lastdir != ADOWNRIGHT) {
-						SpellMoves += ADOWNRIGHT;
-					}
-				} else if(d.x > 0 && d.y < 0) {
-					if(lastdir != ADOWNLEFT) {
-						SpellMoves += ADOWNLEFT;
-					}
-				} else if(d.x < 0 && d.y > 0) {
-					if(lastdir != AUPRIGHT) {
-						SpellMoves += AUPRIGHT;
-					}
-				} else if(d.x > 0 && d.y > 0) {
-					if(lastdir != AUPLEFT) {
-						SpellMoves += AUPLEFT;
-					}
+			if(d.x < 0 && d.y < 0) {
+				if(lastdir != ADOWNRIGHT) {
+					SpellMoves += ADOWNRIGHT;
 				}
-				
-			} else if(a > b) {
-				// Horizontal movement.
-				
-				if(d.x < 0) {
-					if(lastdir != ARIGHT) {
-						SpellMoves += ARIGHT;
-					}
-				} else {
-					if(lastdir != ALEFT) {
-						SpellMoves += ALEFT;
-					}
+			} else if(d.x > 0 && d.y < 0) {
+				if(lastdir != ADOWNLEFT) {
+					SpellMoves += ADOWNLEFT;
 				}
+			} else if(d.x < 0 && d.y > 0) {
+				if(lastdir != AUPRIGHT) {
+					SpellMoves += AUPRIGHT;
+				}
+			} else if(d.x > 0 && d.y > 0) {
+				if(lastdir != AUPLEFT) {
+					SpellMoves += AUPLEFT;
+				}
+			}
 				
+		} else if(a > b) {
+			// Horizontal movement.
+				
+			if(d.x < 0) {
+				if(lastdir != ARIGHT) {
+					SpellMoves += ARIGHT;
+				}
 			} else {
-				// Vertical movement.
+				if(lastdir != ALEFT) {
+					SpellMoves += ALEFT;
+				}
+			}
 				
-				if(d.y < 0) {
-					if(lastdir != ADOWN) {
-						SpellMoves += ADOWN;
-					}
-				} else {
-					if(lastdir != AUP) {
-						SpellMoves += AUP;
-					}
+		} else {
+			// Vertical movement.
+				
+			if(d.y < 0) {
+				if(lastdir != ADOWN) {
+					SpellMoves += ADOWN;
+				}
+			} else {
+				if(lastdir != AUP) {
+					SpellMoves += AUP;
 				}
 			}
 		}
+		
 	}
 }
 
