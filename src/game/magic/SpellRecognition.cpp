@@ -195,6 +195,10 @@ void ARX_SPELLS_AddPoint(const Vec2s & pos) {
 		return;
 	}
 	
+	if(plist[CurrPoint - 1] == pos){
+		return;
+	}
+	
 	plist[CurrPoint] = pos;
 	CurrPoint++;
 	if(CurrPoint >= MAX_POINTS){
