@@ -235,7 +235,7 @@ enum EntityVisilibity {
 
 struct AnimationBlendStatus {
 	bool m_active;
-	unsigned long lastanimtime;
+	ArxInstant lastanimtime;
 };
 
 class Entity {
@@ -319,12 +319,12 @@ public:
 	
 	std::set<std::string> groups;
 	Vec2s m_inventorySize;// Inventory Icon size
-	unsigned long soundtime;
+	ArxInstant soundtime;
 	unsigned long soundcount;
 	
-	unsigned long sfx_time;
-	unsigned long collide_door_time;
-	unsigned long ouch_time;
+	ArxInstant sfx_time;
+	ArxInstant collide_door_time;
+	ArxInstant ouch_time;
 	float dmg_sum;
 	
 	IO_SPELLCAST_DATA spellcast_data;

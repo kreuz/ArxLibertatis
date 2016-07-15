@@ -68,165 +68,305 @@ ZeniMax Media Inc., Suite 120, Rockville, Maryland 20850 USA.
 #include "scene/Interactive.h"
 
 
+struct POLYBOOM {
+	EERIEPOLY * ep;
+	float u[4];
+	float v[4];
+	Color3f rgb;
+	short type;
+	short nbvert;
+	TextureContainer * tc;
+	ArxInstant timecreation;
+	ArxDuration tolive;
+};
+
+static const size_t MAX_POLYBOOM = 4000;
+static std::vector<POLYBOOM> polyboom(MAX_POLYBOOM);
+
+static const float BOOM_RADIUS = 420.f;
+
 extern TextureContainer * Boom;
-
-std::vector<POLYBOOM> polyboom(MAX_POLYBOOM);
-std::vector<TexturedVertex> g_shadowBatch;
-
 extern Color ulBKGColor;
 
-static void AddToShadowBatch(TexturedVertex * _pVertex1, TexturedVertex * _pVertex2,
-                             TexturedVertex * _pVertex3) {
-	
-	TexturedVertex pPointAdd[3];
-	EE_P(_pVertex1->p, pPointAdd[0]);
-	EE_P(_pVertex2->p, pPointAdd[1]);
-	EE_P(_pVertex3->p, pPointAdd[2]);
-	pPointAdd[0].color = _pVertex1->color;
-	pPointAdd[0].uv = _pVertex1->uv;
-	pPointAdd[1].color = _pVertex2->color;
-	pPointAdd[1].uv = _pVertex2->uv;
-	pPointAdd[2].color = _pVertex3->color;
-	pPointAdd[2].uv = _pVertex3->uv;
-
-	g_shadowBatch.push_back(pPointAdd[0]);
-	g_shadowBatch.push_back(pPointAdd[1]);
-	g_shadowBatch.push_back(pPointAdd[2]);
+size_t PolyBoom_count() {
+	return polyboom.size();
 }
 
-void ARXDRAW_DrawInterShadows() {
+void ARX_BOOMS_ClearAllPolyBooms() {
+	polyboom.clear();
+}
+
+void ARX_BOOMS_Add(const Vec3f & poss) {
 	
-	ARX_PROFILE_FUNC();
+	static TextureContainer * tc2 = TextureContainer::Load("graph/particles/boom");
 	
-	g_shadowBatch.clear();
+	// TODO copy-paste background tiles
+	int tilex = int(poss.x * ACTIVEBKG->Xmul);
+	int tilez = int(poss.z * ACTIVEBKG->Zmul);
+	int radius = 3;
 	
-	GRenderer->SetFogColor(Color::none);
-	GRenderer->SetDepthBias(1);
+	int minx = std::max(tilex - radius, 0);
+	int maxx = std::min(tilex + radius, ACTIVEBKG->Xsize - 1);
+	int minz = std::max(tilez - radius, 0);
+	int maxz = std::min(tilez + radius, ACTIVEBKG->Zsize - 1);
 	
-	for(long i=0; i<TREATZONE_CUR; i++) {
-		if(treatio[i].show != 1 || !treatio[i].io)
-			continue;
-		
-		Entity *io = treatio[i].io;
-		
-		if(   !io->obj
-		   || (io->ioflags & IO_JUST_COLLIDE)
-		   || (io->ioflags & IO_NOSHADOW)
-		   || (io->ioflags & IO_GOLD)
-		   || !(io->show == SHOW_FLAG_IN_SCENE)
-		) {
-			continue;
-		}
-		
-		
-		EERIE_BKG_INFO * bkgData = getFastBackgroundData(io->pos.x, io->pos.z);
-		if(bkgData && !bkgData->treat) { //TODO is that correct ?
-			continue;
-		}
-		
-		TexturedVertex ltv[4];
-		ltv[0] = TexturedVertex(Vec3f(0, 0, 0.001f), 1.f, ColorRGBA(0), Vec2f(0.3f, 0.3f));
-		ltv[1] = TexturedVertex(Vec3f(0, 0, 0.001f), 1.f, ColorRGBA(0), Vec2f(0.7f, 0.3f));
-		ltv[2] = TexturedVertex(Vec3f(0, 0, 0.001f), 1.f, ColorRGBA(0), Vec2f(0.7f, 0.7f));
-		ltv[3] = TexturedVertex(Vec3f(0, 0, 0.001f), 1.f, ColorRGBA(0), Vec2f(0.3f, 0.7f));
-		
-		if(io->obj->grouplist.size() <= 1) {
-			for(size_t k = 0; k < io->obj->vertexlist.size(); k += 9) {
-				EERIEPOLY *ep = CheckInPoly(io->obj->vertexlist3[k].v);
-				
-				if(!ep)
-					continue;
-				
-				Vec3f in;
-				in.y = ep->min.y - 3.f;
-				float r = 0.5f - ((float)glm::abs(io->obj->vertexlist3[k].v.y - in.y)) * (1.f/500);
-				r -= io->invisibility;
-				r *= io->scale;
-				
-				if(r <= 0.f)
-					continue;
-				
-				float s1 = 16.f * io->scale;
-				float s2 = s1 * (1.f/2);
-				in.x = io->obj->vertexlist3[k].v.x - s2;
-				in.z = io->obj->vertexlist3[k].v.z - s2;
-				
-				r *= 255.f;
-				long lv = r;
-				ltv[0].color = ltv[1].color = ltv[2].color = ltv[3].color = Color(lv, lv, lv, 255).toRGBA();
-				
-				ltv[0].p = EE_RT(in);
-				in.x += s1;
-				ltv[1].p = EE_RT(in);
-				in.z += s1;
-				ltv[2].p = EE_RT(in);
-				in.x -= s1;
-				ltv[3].p = EE_RT(in);
-				
-				if(ltv[0].p.z > 0.f && ltv[1].p.z > 0.f && ltv[2].p.z > 0.f) {
-					AddToShadowBatch(&ltv[0], &ltv[1], &ltv[2]);
-					AddToShadowBatch(&ltv[0], &ltv[2], &ltv[3]);
+	for(int z = minz; z <= maxz; z++)
+	for(int x = minx; x <= maxx; x++) {
+		EERIE_BKG_INFO & eg = ACTIVEBKG->fastdata[x][z];
+		for(long l = 0; l < eg.nbpoly; l++) {
+			EERIEPOLY * ep = &eg.polydata[l];
+			
+			if((ep->type & POLY_TRANS) && !(ep->type & POLY_WATER)) {
+				continue;
+			}
+			
+			long nbvert = (ep->type & POLY_QUAD) ? 4 : 3;
+			
+			float temp_uv1[4];
+			
+			bool dod = true;
+			for(long k = 0; k < nbvert; k++) {
+				float ddd = fdist(ep->v[k].p, poss);
+				if(ddd > BOOM_RADIUS) {
+					dod = false;
+					break;
+				} else {
+					temp_uv1[k] = 0.5f - ddd * (0.5f / BOOM_RADIUS);
 				}
 			}
-		} else {
-			for(size_t k = 0; k < io->obj->grouplist.size(); k++) {
-				long origin = io->obj->grouplist[k].origin;
-				EERIEPOLY *ep = CheckInPoly(io->obj->vertexlist3[origin].v);
+			if(!dod) {
+				continue;
+			}
+			
+			if(polyboom.size() >= MAX_POLYBOOM) {
+				continue;
+			}
+			
+			POLYBOOM pb;
+			
+			pb.type = 0;
+			pb.ep = ep;
+			pb.tc = tc2;
+			pb.tolive = 10000;
+			pb.timecreation = arxtime.now_ul();
+			pb.rgb = Color3f::black;
+			for(int k = 0; k < nbvert; k++) {
+				pb.v[k] = pb.u[k] = temp_uv1[k];
+			}
+			pb.nbvert = short(nbvert);
+			
+			polyboom.push_back(pb);
+		}
+	}
+}
+
+extern TextureContainer * bloodsplat[6];
+extern TextureContainer * water_splat[3];
+
+void SpawnGroundSplat(const Sphere & sp, const Color3f & col, long flags) {
+	
+	Vec3f poss = sp.origin;
+	float size = sp.radius;
+	
+	if(polyboom.size() > (MAX_POLYBOOM >> 2) - 30)
+		return;
+	
+	if(polyboom.size() > 250 && size < 10)
+		return;
+	
+	float splatsize=90;
+	
+	if(size > 40.f)
+		size = 40.f;
+	
+	size *= 0.75f;
+	
+	switch(config.video.levelOfDetail) {
+		case 2:
+			if(polyboom.size() > 160)
+				return;
+			
+			splatsize = 90;
+			size *= 1.f;
+		break;
+		case 1:
+			if(polyboom.size() > 60)
+				return;
+			
+			splatsize = 60;
+			size *= 0.5f;
+		break;
+		default:
+			if(polyboom.size() > 10)
+				return;
+			
+			splatsize = 30;
+			size *= 0.25f;
+		break;
+	}
+	
+	
+	float py;
+	EERIEPOLY *ep = CheckInPoly(poss + Vec3f(0.f, -40, 0.f), &py);
+	
+	if(!ep)
+		return;
+	
+	if(flags & 1)
+		py = poss.y;
+	
+	EERIEPOLY TheoricalSplat; // clockwise
+	TheoricalSplat.v[0].p.x=-splatsize;
+	TheoricalSplat.v[0].p.y = py; 
+	TheoricalSplat.v[0].p.z=-splatsize;
+	
+	TheoricalSplat.v[1].p.x=-splatsize;
+	TheoricalSplat.v[1].p.y = py; 
+	TheoricalSplat.v[1].p.z=+splatsize;
+	
+	TheoricalSplat.v[2].p.x=+splatsize;
+	TheoricalSplat.v[2].p.y = py; 
+	TheoricalSplat.v[2].p.z=+splatsize;
+	
+	TheoricalSplat.v[3].p.x=+splatsize;
+	TheoricalSplat.v[3].p.y = py; 
+	TheoricalSplat.v[3].p.z=-splatsize;
+	TheoricalSplat.type=POLY_QUAD;
+	
+	Vec3f RealSplatStart(-size, py, -size);
+	
+	TheoricalSplat.v[0].p.x += poss.x;
+	TheoricalSplat.v[0].p.z += poss.z;
+	
+	TheoricalSplat.v[1].p.x += poss.x;
+	TheoricalSplat.v[1].p.z += poss.z;
+	
+	TheoricalSplat.v[2].p.x += poss.x;
+	TheoricalSplat.v[2].p.z += poss.z;
+	
+	TheoricalSplat.v[3].p.x += poss.x;
+	TheoricalSplat.v[3].p.z += poss.z;
+	
+	RealSplatStart.x += poss.x;
+	RealSplatStart.z += poss.z;
+	
+	float hdiv,vdiv;
+	hdiv=vdiv=1.f/(size*2);
+	
+	ArxInstant now = arxtime.now_ul();
+	
+	std::vector<POLYBOOM>::iterator pb = polyboom.begin();
+	while(pb != polyboom.end()) {
+	
+		//TODO what does this do ?
+		pb->type |= 128;
+		++ pb;
+	}
+	
+	// TODO copy-paste background tiles
+	int tilex = int(poss.x * ACTIVEBKG->Xmul);
+	int tilez = int(poss.z * ACTIVEBKG->Zmul);
+	int radius = 3;
+	
+	int minx = std::max(tilex - radius, 0);
+	int maxx = std::min(tilex + radius, ACTIVEBKG->Xsize - 1);
+	int minz = std::max(tilez - radius, 0);
+	int maxz = std::min(tilez + radius, ACTIVEBKG->Zsize - 1);
+	
+	for(int z = minz; z <= maxz; z++)
+	for(int x = minx; x <= maxx; x++) {
+		EERIE_BKG_INFO *eg = &ACTIVEBKG->fastdata[x][z];
+		
+		for(long l = 0; l < eg->nbpolyin; l++) {
+			EERIEPOLY *ep = eg->polyin[l];
+			
+			if((flags & 2) && !(ep->type & POLY_WATER))
+				continue;
+			
+			if((ep->type & POLY_TRANS) && !(ep->type & POLY_WATER))
+				continue;
+			
+			long nbvert = (ep->type & POLY_QUAD) ? 4 : 3;
+			
+			bool oki = false;
+			
+			for(long k = 0; k < nbvert; k++) {
+				if(PointIn2DPolyXZ(&TheoricalSplat, ep->v[k].p.x, ep->v[k].p.z)
+					&& glm::abs(ep->v[k].p.y-py) < 100.f)
+				{
+					oki = true;
+					break;
+				}
 				
-				if(!ep)
-					continue;
+				if(PointIn2DPolyXZ(&TheoricalSplat, (ep->v[k].p.x+ep->center.x) * 0.5f, (ep->v[k].p.z+ep->center.z) * 0.5f)
+					&& glm::abs(ep->v[k].p.y-py) < 100.f)
+				{
+					oki = true;
+					break;
+				}
+			}
+			
+			if(!oki && PointIn2DPolyXZ(&TheoricalSplat, ep->center.x, ep->center.z) && glm::abs(ep->center.y-py) < 100.f)
+				oki = true;
+			
+			if(oki) {
 				
-				Vec3f in;
-				in.y = ep->min.y - 3.f;
-				float r = 0.8f - ((float)glm::abs(io->obj->vertexlist3[origin].v.y - in.y)) * (1.f/500);
-				r *= io->obj->grouplist[k].siz;
-				r -= io->invisibility;
-				
-				if(r <= 0.f)
-					continue;
-				
-				float s1 = io->obj->grouplist[k].siz * 44.f;
-				float s2 = s1 * (1.f/2);
-				in.x = io->obj->vertexlist3[origin].v.x - s2;
-				in.z = io->obj->vertexlist3[origin].v.z - s2;
-				
-				r *= 255.f;
-				long lv = r;
-				ltv[0].color = ltv[1].color = ltv[2].color = ltv[3].color = Color(lv, lv, lv, 255).toRGBA();
-				
-				ltv[0].p = EE_RT(in);
-				in.x += s1;
-				ltv[1].p = EE_RT(in);
-				in.z += s1;
-				ltv[2].p = EE_RT(in);
-				in.x -= s1;
-				ltv[3].p = EE_RT(in);
-				
-				AddToShadowBatch(&ltv[0], &ltv[1], &ltv[2]);
-				AddToShadowBatch(&ltv[0], &ltv[2], &ltv[3]);
+				if(polyboom.size() < MAX_POLYBOOM) {
+					POLYBOOM pb;
+					
+					if(flags & 2) {
+						pb.type = 2;
+						
+						long num = Random::get(0, 2);
+						pb.tc = water_splat[num];
+						
+						pb.tolive=1500;
+					} else {
+						pb.type = 1;
+						
+						long num = Random::get(0, 5);
+						pb.tc = bloodsplat[num];
+						
+						pb.tolive = ArxDuration(16000 * size * (1.0f/40));
+					}
+					
+					pb.ep=ep;
+					
+					pb.timecreation=now;
+					pb.rgb = col;
+					
+					for(int k = 0; k < nbvert; k++) {
+						float vdiff=glm::abs(ep->v[k].p.y-RealSplatStart.y);
+						pb.u[k]=(ep->v[k].p.x-RealSplatStart.x)*hdiv;
+						
+						if(pb.u[k]<0.5f)
+							pb.u[k]-=vdiff*hdiv;
+						else
+							pb.u[k]+=vdiff*hdiv;
+						
+						pb.v[k]=(ep->v[k].p.z-RealSplatStart.z)*vdiv;
+						
+						if(pb.v[k]<0.5f)
+							pb.v[k]-=vdiff*vdiv;
+						else
+							pb.v[k]+=vdiff*vdiv;
+					}
+					
+					pb.nbvert = short(nbvert);
+					
+					polyboom.push_back(pb);
+				}
 			}
 		}
 	}
-	
-	if(g_shadowBatch.size() > 0)
-	{
-		GRenderer->SetRenderState(Renderer::DepthWrite, false);
-		GRenderer->SetBlendFunc(BlendZero, BlendInvSrcColor);
-		GRenderer->SetRenderState(Renderer::AlphaBlending, true);
-		GRenderer->SetTexture(0, Boom);
-		
-		EERIEDRAWPRIM(Renderer::TriangleList, &g_shadowBatch[0], g_shadowBatch.size());
-		
-		GRenderer->SetRenderState(Renderer::AlphaBlending, false);
-		GRenderer->SetRenderState(Renderer::DepthWrite, true);
-		GRenderer->SetDepthBias(0);
-		GRenderer->SetFogColor(ulBKGColor);
-	}
 }
+
+
+
 
 // This used to add a bias when the "forceZbias" config option was activated, but it
 // was off by default and we removed it.
-static void IncrementPolyWithNormalOutput(EERIEPOLY * _pPoly, TexturedVertex * _pOut) {
+static void IncrementPolyWithNormalOutput(EERIEPOLY * _pPoly, TexturedVertexUntransformed * _pOut) {
 	
 	_pOut[0].p = _pPoly->v[0].p;
 	_pOut[1].p = _pPoly->v[1].p;
@@ -241,29 +381,28 @@ void ARXDRAW_DrawPolyBoom() {
 	
 	ARX_PROFILE_FUNC();
 	
-	TexturedVertex ltv[4];
-
 	GRenderer->SetFogColor(Color::none); // TODO: not handled by RenderMaterial
-	unsigned long now = arxtime.now_ul();
+	ArxInstant now = arxtime.now_ul();
 	
 	for(size_t i = 0; i < polyboom.size(); i++) {
 		
 		POLYBOOM & pb = polyboom[i];
 		
+		// TODO what exactly does pb.type do ?
 		if(pb.type & 128) {
 			if(pb.timecreation - g_framedelay > 0) {
 				float fCalc = pb.timecreation - g_framedelay;
 				pb.timecreation = checked_range_cast<unsigned long>(fCalc);
 			}
-
+			
 			if(pb.timecreation - g_framedelay > 0) {
 				float fCalc =  pb.timecreation - g_framedelay;
 				pb.timecreation = checked_range_cast<unsigned long>(fCalc);
 			}
 		}
-
-		float t = (float)pb.timecreation + (float)pb.tolive - (float)now;
-
+		
+		ArxDuration t = pb.timecreation + pb.tolive - now;
+		
 		if(t <= 0) {
 			std::swap(polyboom[i], polyboom.back());
 			polyboom.pop_back();
@@ -276,125 +415,129 @@ void ARXDRAW_DrawPolyBoom() {
 	mat.setDepthBias(8);
 	mat.setLayer(RenderMaterial::Decal);
 	mat.setWrapMode(TextureStage::WrapClamp);
-
+	
 	std::vector<POLYBOOM>::iterator itr = polyboom.begin();
 	while (itr != polyboom.end()) {
-
+		
 		POLYBOOM & pb = *itr;
 		
-		float t = (float)pb.timecreation + (float)pb.tolive - (float)now;
+		ArxDuration t = pb.timecreation + pb.tolive - now;
 		
 		long typp = pb.type;
 		typp &= ~128;
 		
 		switch(typp) {
 			
-		case 0: { // Scorch mark
-			
-			float tt = t / (float)pb.tolive * 0.8f;
-			
-			IncrementPolyWithNormalOutput(pb.ep,ltv);
-			
-			for(long k = 0; k < pb.nbvert; k++) {
-				ltv[k].p = EE_RT(ltv[k].p);
-				ltv[k].uv.x=pb.u[k];
-				ltv[k].uv.y=pb.v[k];
-				ltv[k].color = (player.m_improve ? (Color3f::red * (tt*.5f)) : Color3f::gray(tt)).toRGB();
-			}
-			
-			if(player.m_improve) {
-				mat.setBlendType(RenderMaterial::Additive);
-			} else {
-				mat.setBlendType(RenderMaterial::Subtractive);
-			}
-			mat.setTexture(Boom);
-			
-			drawTriangle(mat, &ltv[0]);
-			if(pb.nbvert & 4) {
-				drawTriangle(mat, &ltv[1]);
-			}
-			
-			break;
-		}
-		
-		case 1: { // Blood
-			
-			float div = 1.f / (float)pb.tolive;
-			float tt = t * div;
-			float tr = std::max(1.f, tt * 2 - 0.5f);
-			ColorRGBA col = (pb.rgb * tt).toRGB(glm::clamp(tt * 1.5f, 0.f, 1.f) * 255);
-			
-			IncrementPolyWithNormalOutput(pb.ep, ltv);
-			
-			for(long k = 0; k < pb.nbvert; k++) {
-				ltv[k].p = EE_RT(ltv[k].p);
-				ltv[k].uv.x=(pb.u[k]-0.5f)*(tr)+0.5f;
-				ltv[k].uv.y=(pb.v[k]-0.5f)*(tr)+0.5f;
-				ltv[k].color = col;
-			}
-			
-			mat.setBlendType(RenderMaterial::Subtractive2);
-			mat.setTexture(pb.tc);
-			
-			drawTriangle(mat, &ltv[0]);
-			if(pb.nbvert & 4) {
-				drawTriangle(mat, &ltv[1]);
-			}
-			
-			break;
-		}
-		
-		case 2: { // Water
-			
-			float div = 1.f / (float)pb.tolive;
-			float tt = t * div;
-			float tr = std::max(1.f, tt * 2 - 0.5f);
-			float ttt = tt * 0.5f;
-			ColorRGBA col = (pb.rgb * ttt).toRGB();
-			
-			IncrementPolyWithNormalOutput(pb.ep,ltv);
-			
-			for(long k = 0; k < pb.nbvert; k++) {
-				ltv[k].p = EE_RT(ltv[k].p);
-				ltv[k].uv.x=(pb.u[k]-0.5f)*(tr)+0.5f;
-				ltv[k].uv.y=(pb.v[k]-0.5f)*(tr)+0.5f;
-				ltv[k].color=col;
-			}
-
-			if (	(ltv[0].uv.x<0.f)
-				&&	(ltv[1].uv.x<0.f)
-				&&	(ltv[2].uv.x<0.f)
-				&&	(ltv[3].uv.x<0.f) )
+			case 0: { // Scorch mark
+				
+				float tt = t / float(pb.tolive) * 0.8f;
+				ColorRGBA col = (player.m_improve ? (Color3f::red * (tt*.5f)) : Color3f::gray(tt)).toRGB();
+				
+				TexturedVertexUntransformed ltv[4];
+				IncrementPolyWithNormalOutput(pb.ep,ltv);
+				
+				for(long k = 0; k < pb.nbvert; k++) {
+					ltv[k].p = ltv[k].p;
+					ltv[k].uv.x=pb.u[k];
+					ltv[k].uv.y=pb.v[k];
+					ltv[k].color = col;
+				}
+				
+				if(player.m_improve) {
+					mat.setBlendType(RenderMaterial::Additive);
+				} else {
+					mat.setBlendType(RenderMaterial::Subtractive);
+				}
+				mat.setTexture(Boom);
+				
+				drawTriangle(mat, &ltv[0]);
+				if(pb.nbvert & 4) {
+					drawTriangle(mat, &ltv[1]);
+				}
+				
 				break;
-
-			if (	(ltv[0].uv.y<0.f)
-				&&	(ltv[1].uv.y<0.f)
-				&&	(ltv[2].uv.y<0.f)
-				&&	(ltv[3].uv.y<0.f) )
-				break;
-
-			if (	(ltv[0].uv.x>1.f)
-				&&	(ltv[1].uv.x>1.f)
-				&&	(ltv[2].uv.x>1.f)
-				&&	(ltv[3].uv.x>1.f) )
-				break;
-
-			if (	(ltv[0].uv.y>1.f)
-				&&	(ltv[1].uv.y>1.f)
-				&&	(ltv[2].uv.y>1.f)
-				&&	(ltv[3].uv.y>1.f) )
-				break;
-			
-			mat.setBlendType(RenderMaterial::Screen);
-			mat.setTexture(pb.tc);
-			
-			drawTriangle(mat, &ltv[0]);
-			if(pb.nbvert & 4) {
-				drawTriangle(mat, &ltv[1]);
 			}
 			
-			break;
-		}
+			case 1: { // Blood
+				
+				float div = 1.f / float(pb.tolive);
+				float tt = t * div;
+				float tr = std::max(1.f, tt * 2 - 0.5f);
+				ColorRGBA col = Color4f(pb.rgb * tt, glm::clamp(tt * 1.5f, 0.f, 1.f)).toRGBA();
+				
+				TexturedVertexUntransformed ltv[4];
+				IncrementPolyWithNormalOutput(pb.ep, ltv);
+				
+				for(long k = 0; k < pb.nbvert; k++) {
+					ltv[k].p = ltv[k].p;
+					ltv[k].uv.x=(pb.u[k]-0.5f)*(tr)+0.5f;
+					ltv[k].uv.y=(pb.v[k]-0.5f)*(tr)+0.5f;
+					ltv[k].color = col;
+				}
+				
+				mat.setBlendType(RenderMaterial::Subtractive2);
+				mat.setTexture(pb.tc);
+				
+				drawTriangle(mat, &ltv[0]);
+				if(pb.nbvert & 4) {
+					drawTriangle(mat, &ltv[1]);
+				}
+				
+				break;
+			}
+			
+			case 2: { // Water
+				
+				float div = 1.f / float(pb.tolive);
+				float tt = t * div;
+				float tr = std::max(1.f, tt * 2 - 0.5f);
+				float ttt = tt * 0.5f;
+				ColorRGBA col = (pb.rgb * ttt).toRGB();
+				
+				TexturedVertexUntransformed ltv[4];
+				IncrementPolyWithNormalOutput(pb.ep,ltv);
+				
+				for(long k = 0; k < pb.nbvert; k++) {
+					ltv[k].p = ltv[k].p;
+					ltv[k].uv.x=(pb.u[k]-0.5f)*(tr)+0.5f;
+					ltv[k].uv.y=(pb.v[k]-0.5f)*(tr)+0.5f;
+					ltv[k].color=col;
+				}
+				
+				if (	(ltv[0].uv.x<0.f)
+					&&	(ltv[1].uv.x<0.f)
+					&&	(ltv[2].uv.x<0.f)
+					&&	(ltv[3].uv.x<0.f) )
+					break;
+				
+				if (	(ltv[0].uv.y<0.f)
+					&&	(ltv[1].uv.y<0.f)
+					&&	(ltv[2].uv.y<0.f)
+					&&	(ltv[3].uv.y<0.f) )
+					break;
+				
+				if (	(ltv[0].uv.x>1.f)
+					&&	(ltv[1].uv.x>1.f)
+					&&	(ltv[2].uv.x>1.f)
+					&&	(ltv[3].uv.x>1.f) )
+					break;
+				
+				if (	(ltv[0].uv.y>1.f)
+					&&	(ltv[1].uv.y>1.f)
+					&&	(ltv[2].uv.y>1.f)
+					&&	(ltv[3].uv.y>1.f) )
+					break;
+				
+				mat.setBlendType(RenderMaterial::Screen);
+				mat.setTexture(pb.tc);
+				
+				drawTriangle(mat, &ltv[0]);
+				if(pb.nbvert & 4) {
+					drawTriangle(mat, &ltv[1]);
+				}
+				
+				break;
+			}
 		}
 		
 		++itr;

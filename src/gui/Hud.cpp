@@ -147,7 +147,7 @@ void HitStrengthGauge::update() {
 		if(player.m_bowAimRatio > 0) {
 			j = player.m_bowAimRatio;
 		} else {
-			const unsigned long delta = arxtime.now_ul() - player.m_aimTime;
+			const ArxDuration delta = arxtime.now_ul() - player.m_aimTime;
 			
 			//TODO global
 			bIsAiming = delta > 0;
@@ -287,7 +287,7 @@ void BackpackIconGui::update(const Rectf & parent) {
 
 void BackpackIconGui::updateInput() {
 	
-	static unsigned long flDelay = 0;
+	static ArxInstant flDelay = 0;
 	
 	// Check for backpack Icon
 	if(m_rect.contains(Vec2f(DANAEMouse))) {
@@ -611,22 +611,8 @@ void CurrentTorchIconGui::update() {
 
 void CurrentTorchIconGui::createFireParticle() {
 	
-	PARTICLE_DEF * pd = createParticle();
-	if(!pd) {
-		return;
-	}
-	
 	Vec2f pos = m_rect.topLeft() + Vec2f(Random::getf(9.f, 12.f), Random::getf(0.f, 6.f)) * m_scale;
-	
-	pd->special = FIRE_TO_SMOKE;
-	pd->ov = Vec3f(pos, 0.0000001f);
-	pd->move = Vec3f(Random::getf(-1.5f, 1.5f), Random::getf(-6.f, -5.f), 0.f) * m_scale;
-	pd->scale = Vec3f(1.8f, 1.8f, 1.f);
-	pd->tolive = Random::getu(500, 900);
-	pd->tc = fire2;
-	pd->rgb = Color3f(1.f, .6f, .5f);
-	pd->siz = 14.f * m_scale;
-	pd->is2D = true;
+	spawn2DFireParticle(pos, m_scale);
 }
 
 void CurrentTorchIconGui::draw() {

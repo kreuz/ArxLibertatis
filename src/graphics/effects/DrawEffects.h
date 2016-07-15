@@ -47,11 +47,11 @@ ZeniMax Media Inc., Suite 120, Rockville, Maryland 20850 USA.
 #ifndef ARX_GRAPHICS_EFFECTS_DRAWEFFECTS_H
 #define ARX_GRAPHICS_EFFECTS_DRAWEFFECTS_H
 
-class TextureContainer;
-struct EERIE_FACE;
+#include "math/Types.h"
 
-bool ARX_DrawHalo(TextureContainer * _pTex, float _fPosX, float _fPosY, float _fWidth, float _fHeight, float _fR, float _fG, float _fB, float _fDecalX, float _fDecalY);
-void ARXDRAW_DrawInterShadows();
+size_t PolyBoom_count();
+void ARX_BOOMS_ClearAllPolyBooms();
+void ARX_BOOMS_Add(const Vec3f & pos);
 void ARXDRAW_DrawPolyBoom();
 
 #endif // ARX_GRAPHICS_EFFECTS_DRAWEFFECTS_H

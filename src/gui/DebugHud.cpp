@@ -47,9 +47,11 @@
 #include "scene/Interactive.h"
 #include "game/EntityManager.h"
 #include "game/NPC.h"
+#include "game/magic/SpellRecognition.h"
 
 #include "graphics/Renderer.h"
 #include "graphics/DrawLine.h"
+#include "graphics/effects/DrawEffects.h"
 
 #include "window/RenderWindow.h"
 #include "platform/profiler/Profiler.h"
@@ -89,6 +91,25 @@ const FlagName<EntityFlags> EntityFlagNames[] = {
 	{IO_CAN_COMBINE         , "CAN_COMBINE"}
 };
 
+const FlagName<GameFlags> GameFlagNames[] = {
+	{GFLAG_INTERACTIVITY     , "INTERACTIVITY"},
+	{GFLAG_ISINTREATZONE     , "ISINTREATZONE"},
+	{GFLAG_WASINTREATZONE    , "WASINTREATZONE"},
+	{GFLAG_NEEDINIT          , "NEEDINIT"},
+	{GFLAG_INTERACTIVITYHIDE , "INTERACTIVITYHIDE"},
+	{GFLAG_DOOR              , "DOOR"},
+	{GFLAG_INVISIBILITY      , "INVISIBILITY"},
+	{GFLAG_NO_PHYS_IO_COL    , "NO_PHYS_IO_COL"},
+	{GFLAG_VIEW_BLOCKER      , "VIEW_BLOCKER"},
+	{GFLAG_PLATFORM          , "PLATFORM"},
+	{GFLAG_ELEVATOR          , "ELEVATOR"},
+	{GFLAG_MEGAHIDE          , "MEGAHIDE"},
+	{GFLAG_HIDEWEAPON        , "HIDEWEAPON"},
+	{GFLAG_NOGORE            , "NOGORE"},
+	{GFLAG_GOREEXPLODE       , "GOREEXPLODE"},
+	{GFLAG_NOCOMPUTATION     , "NOCOMPUTATION"}
+};
+
 const FlagName<Behaviour> BehaviourFlagNames[] = {
 	{BEHAVIOUR_NONE          , "NONE"},
 	{BEHAVIOUR_FRIENDLY      , "FRIENDLY"},
@@ -110,29 +131,26 @@ const FlagName<Behaviour> BehaviourFlagNames[] = {
 
 static const char * entityVisilibityToString(EntityVisilibity value) {
 	switch (value) {
-		case SHOW_FLAG_NOT_DRAWN:    return "NOT_DRAWN"; break;
-		case SHOW_FLAG_IN_SCENE:     return "IN_SCENE"; break;
-		case SHOW_FLAG_LINKED:       return "LINKED"; break;
-		case SHOW_FLAG_IN_INVENTORY: return "IN_INVENTORY"; break;
-		case SHOW_FLAG_HIDDEN:       return "HIDDEN"; break;
-		case SHOW_FLAG_TELEPORTING:  return "TELEPORTING"; break;
-		case SHOW_FLAG_KILLED:       return "KILLED"; break;
-		case SHOW_FLAG_MEGAHIDE:     return "MEGAHIDE"; break;
-		case SHOW_FLAG_ON_PLAYER:    return "ON_PLAYER"; break;
-		default:                     return "Unknown";
+		case SHOW_FLAG_NOT_DRAWN:    return "NOT_DRAWN";
+		case SHOW_FLAG_IN_SCENE:     return "IN_SCENE";
+		case SHOW_FLAG_LINKED:       return "LINKED";
+		case SHOW_FLAG_IN_INVENTORY: return "IN_INVENTORY";
+		case SHOW_FLAG_HIDDEN:       return "HIDDEN";
+		case SHOW_FLAG_TELEPORTING:  return "TELEPORTING";
+		case SHOW_FLAG_KILLED:       return "KILLED";
+		case SHOW_FLAG_MEGAHIDE:     return "MEGAHIDE";
+		case SHOW_FLAG_ON_PLAYER:    return "ON_PLAYER";
+		case SHOW_FLAG_DESTROYED:    return "DESTROYED";
 	}
+	return "Unknown";
 }
-
-
-std::string LAST_FAILED_SEQUENCE = "none";
-EntityHandle LastSelectedIONum = EntityHandle();
 
 void ShowInfoText() {
 	
 	DebugBox frameInfo = DebugBox(Vec2i(10, 10), "FrameInfo");
 	frameInfo.add("Prims", EERIEDrawnPolys);
 	frameInfo.add("Particles", getParticleCount());
-	frameInfo.add("Polybooms", long(polyboom.size()));
+	frameInfo.add("Polybooms", long(PolyBoom_count()));
 	frameInfo.add("TIME", static_cast<long>(arxtime.now_ul() / 1000));
 	frameInfo.print();
 	
@@ -232,6 +250,7 @@ void ShowInfoText() {
 			entityBox.add("Room", static_cast<long>(io->room));
 			entityBox.add("Move", io->move);
 			entityBox.add("Flags", flagNames(EntityFlagNames, io->ioflags));
+			entityBox.add("GFlags", flagNames(GameFlagNames, io->gameFlags));
 			entityBox.add("Show", entityVisilibityToString(io->show));
 			entityBox.print();
 			

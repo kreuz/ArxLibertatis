@@ -50,6 +50,7 @@ ZeniMax Media Inc., Suite 120, Rockville, Maryland 20850 USA.
 
 #include <stddef.h>
 
+#include "core/TimeTypes.h"
 #include "audio/AudioTypes.h"
 #include "graphics/BaseGraphicsTypes.h"
 #include "graphics/Color.h"
@@ -116,10 +117,10 @@ struct EERIE_LIGHT {
 	float ex_speed;
 	float ex_flaresize;
 	LightHandle m_ignitionLightHandle;
-	unsigned long creationTime;
+	ArxInstant creationTime;
 	
 	// will start to fade before the end of duration...
-	unsigned long duration;
+	ArxDuration duration;
 	
 	audio::SourceId sample;
 	math::Quantizer m_storedFlameTime;

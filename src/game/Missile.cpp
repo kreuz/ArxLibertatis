@@ -56,6 +56,7 @@ ZeniMax Media Inc., Suite 120, Rockville, Maryland 20850 USA.
 #include "graphics/GraphicsTypes.h"
 #include "graphics/Math.h"
 #include "graphics/data/Mesh.h"
+#include "graphics/effects/DrawEffects.h"
 #include "graphics/particle/ParticleEffects.h"
 
 #include "math/Random.h"
@@ -75,9 +76,9 @@ struct ARX_MISSILE
 	Vec3f startpos;
 	Vec3f velocity;
 	Vec3f lastpos;
-	unsigned long timecreation;
-	unsigned long lastupdate;
-	unsigned long tolive;
+	ArxInstant timecreation;
+	ArxInstant lastupdate;
+	ArxDuration tolive;
 	LightHandle	longinfo;
 	EntityHandle owner;
 };
@@ -178,20 +179,20 @@ void ARX_MISSILES_Update() {
 	
 	TextureContainer * tc = TC_fire; 
 
-	unsigned long now = arxtime.now_ul();
+	ArxInstant now = arxtime.now_ul();
 
 	for(unsigned long i(0); i < MAX_MISSILES; i++) {
 		if(missiles[i].type == MISSILE_NONE)
 			continue;
 
-		long framediff = missiles[i].timecreation + missiles[i].tolive - now;
+		ArxDuration framediff = missiles[i].timecreation + missiles[i].tolive - now;
 
 		if(framediff < 0) {
 			ARX_MISSILES_Kill(i);
 			continue;
 		}
 
-		long framediff3 = now - missiles[i].timecreation;
+		ArxDuration framediff3 = now - missiles[i].timecreation;
 
 		switch(missiles[i].type) {
 			case MISSILE_NONE:
@@ -217,6 +218,7 @@ void ARX_MISSILES_Update() {
 
 				if(closerThan(player.pos, pos, 200.f)) {
 					ARX_MISSILES_Kill(i);
+					spawnFireHitParticle(pos, 0);
 					ARX_BOOMS_Add(pos);
 					Add3DBoom(pos);
 					DoSphericDamage(Sphere(dest, 200.0F), 180.0F, DAMAGE_AREAHALF, DAMAGE_TYPE_FIRE | DAMAGE_TYPE_MAGICAL);
@@ -225,6 +227,7 @@ void ARX_MISSILES_Update() {
 
 				if(ep && ep->center.y < dest.y) {
 					ARX_MISSILES_Kill(i);
+					spawnFireHitParticle(dest, 0);
 					ARX_BOOMS_Add(dest);
 					Add3DBoom(dest);
 					DoSphericDamage(Sphere(dest, 200.0F), 180.0F, DAMAGE_AREAHALF, DAMAGE_TYPE_FIRE | DAMAGE_TYPE_MAGICAL);
@@ -233,6 +236,7 @@ void ARX_MISSILES_Update() {
 
 				if(epp && epp->center.y > dest.y) {
 					ARX_MISSILES_Kill(i);
+					spawnFireHitParticle(dest, 0);
 					ARX_BOOMS_Add(dest);
 					Add3DBoom(dest);
 					DoSphericDamage(Sphere(dest, 200.0F), 180.0F, DAMAGE_AREAHALF, DAMAGE_TYPE_FIRE | DAMAGE_TYPE_MAGICAL);
@@ -242,6 +246,7 @@ void ARX_MISSILES_Update() {
 				Vec3f hit;
 				if(EERIELaunchRay3(orgn, dest, hit, 1)) {
 					ARX_MISSILES_Kill(i);
+					spawnFireHitParticle(hit, 0);
 					ARX_BOOMS_Add(hit);
 					Add3DBoom(hit);
 					DoSphericDamage(Sphere(dest, 200.0F), 180.0F, DAMAGE_AREAHALF, DAMAGE_TYPE_FIRE | DAMAGE_TYPE_MAGICAL);
@@ -250,6 +255,7 @@ void ARX_MISSILES_Update() {
 
 				if(!CheckInPoly(dest) || EEIsUnderWater(dest)) {
 					ARX_MISSILES_Kill(i);
+					spawnFireHitParticle(dest, 0);
 					ARX_BOOMS_Add(dest);
 					Add3DBoom(dest);
 					DoSphericDamage(Sphere(dest, 200.0F), 180.0F, DAMAGE_AREAHALF, DAMAGE_TYPE_FIRE | DAMAGE_TYPE_MAGICAL);
@@ -260,6 +266,7 @@ void ARX_MISSILES_Update() {
 
 				if(ici != EntityHandle() && ici != missiles[i].owner) {
 					ARX_MISSILES_Kill(i);
+					spawnFireHitParticle(dest, 0);
 					ARX_BOOMS_Add(dest);
 					Add3DBoom(dest);
 					DoSphericDamage(Sphere(dest, 200.0F), 180.0F, DAMAGE_AREAHALF, DAMAGE_TYPE_FIRE | DAMAGE_TYPE_MAGICAL);

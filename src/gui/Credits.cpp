@@ -61,6 +61,7 @@ ZeniMax Media Inc., Suite 120, Rockville, Maryland 20850 USA.
 #include "gui/Menu.h"
 #include "gui/Text.h"
 #include "gui/MenuWidgets.h"
+#include "gui/menu/MenuFader.h"
 
 #include "graphics/Draw.h"
 #include "graphics/data/TextureContainer.h"
@@ -76,11 +77,6 @@ ZeniMax Media Inc., Suite 120, Rockville, Maryland 20850 USA.
 #include "scene/GameSound.h"
 
 #include "util/Unicode.h"
-
-// TODO extern globals
-extern bool bFadeInOut;
-extern bool bFade;
-extern int iFadeAction;
 
 namespace credits {
 
@@ -452,9 +448,7 @@ void Credits::render() {
 		LogError << "Could not initialize credits";
 		reset();
 		ARXmenu.currentmode = AMCM_MAIN;
-		iFadeAction = -1;
-		bFadeInOut = false;
-		bFade = true;
+		MenuFader_start(true, false, -1);
 	}
 	
 	// Draw the background
@@ -549,19 +543,14 @@ void Credits::render() {
 	
 	if(m_firstVisibleLine >= m_lines.size() && iFadeAction != AMCM_MAIN) {
 		
-		bFadeInOut = true;
-		bFade = true;
-		iFadeAction = AMCM_MAIN;
-		
+		MenuFader_start(true, true, AMCM_MAIN);
 		ARX_MENU_LaunchAmb(AMB_MENU);
 	}
 
-	if(ProcessFadeInOut(bFadeInOut,0.1f) && iFadeAction == AMCM_MAIN) {
+	if(ProcessFadeInOut(bFadeInOut) && iFadeAction == AMCM_MAIN) {
 		reset();
 		ARXmenu.currentmode = AMCM_MAIN;
-		iFadeAction = -1;
-		bFadeInOut = false;
-		bFade = true;
+		MenuFader_start(true, false, -1);
 	}
 	
 }

@@ -56,7 +56,7 @@ static long cur_arm = 0;
 static long cur_sos = 0;
 
 long cur_mega=0;
-static unsigned long sp_max_start = 0;
+static ArxInstant sp_max_start = 0;
 long sp_wep=0;
 short uw_mode=0;
 
@@ -73,7 +73,7 @@ void CheatDrawText() {
 	if(!sp_max_start)
 		return;
 	
-	float elapsed = arxtime.now_f() - sp_max_start;
+	ArxDuration elapsed = arxtime.now_ul() - sp_max_start;
 
 	if(sp_max_start != 0 && elapsed < 20000) {
 		float modi = (20000 - elapsed) * ( 1.0f / 2000 ) * ( 1.0f / 10 );

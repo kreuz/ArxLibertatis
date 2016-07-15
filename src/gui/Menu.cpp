@@ -72,6 +72,7 @@ ZeniMax Media Inc., Suite 120, Rockville, Maryland 20850 USA.
 #include "gui/Cursor.h"
 #include "gui/book/Book.h"
 #include "gui/menu/MenuCursor.h"
+#include "gui/menu/MenuFader.h"
 
 #include "graphics/Draw.h"
 #include "graphics/Math.h"
@@ -94,10 +95,8 @@ extern ARX_INTERFACE_BOOK_MODE g_guiBookCurrentTopTab;
 extern bool START_NEW_QUEST;
 extern long OLD_FLYING_OVER;
 extern long FLYING_OVER;
-extern bool bFadeInOut;
-extern bool bFade;
-extern int iFadeAction;
-extern float fFadeInOut;
+
+
 
 extern float ARXTimeMenu;
 
@@ -108,7 +107,7 @@ extern bool REQUEST_SPEECH_SKIP;
 
 bool bQuickGenFirstClick = true;
 ARX_MENU_DATA ARXmenu;
-bool REFUSE_GAME_RETURN = false;
+bool g_canResumeGame = true;
 
 static long SP_HEAD = 0;
 
@@ -187,7 +186,7 @@ extern bool TIME_INIT;
 
 void ARX_MENU_Clicked_QUIT() {
 	
-	if(REFUSE_GAME_RETURN) {
+	if(!g_canResumeGame) {
 		return;
 	}
 	
@@ -202,7 +201,7 @@ void ARX_MENU_Clicked_NEWQUEST() {
 	
 	arxtime.resume();
 	
-	REFUSE_GAME_RETURN = true;
+	g_canResumeGame = false;
 	
 	ARX_PLAYER_Start_New_Quest();
 	g_guiBookCurrentTopTab = BOOKMODE_STATS;
@@ -213,7 +212,7 @@ void ARX_MENU_Clicked_NEWQUEST() {
 
 static void ARX_MENU_NEW_QUEST_Clicked_QUIT() {
 	START_NEW_QUEST = true;
-	REFUSE_GAME_RETURN = false;
+	g_canResumeGame = true;
 	ARX_MENU_Clicked_QUIT();
 }
 
@@ -223,16 +222,12 @@ void ARX_MENU_Clicked_CREDITS() {
 	ARX_MENU_LaunchAmb(AMB_CREDITS);
 }
 
-void ARX_MENU_Clicked_QUIT_GAME() {
-	mainApp->quit();
-}
-
 void ARX_MENU_Launch(bool allowResume) {
 	
 	arxtime.update();
 	ARXTimeMenu = arxtime.now_f();
 	
-	REFUSE_GAME_RETURN = !allowResume;
+	g_canResumeGame = allowResume;
 
 	arxtime.pause();
 
@@ -268,7 +263,7 @@ void ARX_Menu_Manage() {
 
 					ARX_MENU_Launch(true);
 					bFadeInOut=false;	//fade out
-					bFade=true;			//active le fade
+					g_menuFadeActive = true; //active le fade
 					TRUE_PLAYER_MOUSELOOK_ON = false;
 
 					ARX_PLAYER_PutPlayerInNormalStance();
@@ -288,7 +283,7 @@ void ARX_Menu_Manage() {
 		case AMCM_MAIN: {
 			if(   GInput->isKeyPressedNowUnPressed(Keyboard::Key_Escape)
 			   && MENU_NoActiveWindow()
-			   && !REFUSE_GAME_RETURN
+			   && g_canResumeGame
 			) {
 				arxtime.resume();
 				ARX_MENU_Clicked_QUIT();
@@ -300,10 +295,7 @@ void ARX_Menu_Manage() {
 			   || GInput->isKeyPressedNowUnPressed(Keyboard::Key_Spacebar)
 			) {
 				ARX_SOUND_PlayMenu(SND_MENU_CLICK);
-				bFadeInOut = true;	//fade out
-				bFade = true;			//active le fade
-				iFadeAction = AMCM_MAIN;
-
+				MenuFader_start(true, true, AMCM_MAIN);
 				ARX_MENU_LaunchAmb(AMB_MENU);
 			}
 			break;
@@ -317,57 +309,54 @@ void ARX_Menu_Manage() {
 // ARX Menu Rendering Func
 // returns false if no menu needs to be displayed
 //-----------------------------------------------------------------------------
-bool ARX_Menu_Render() {
+void ARX_Menu_Render() {
 	
 	if(ARXmenu.currentmode == AMCM_OFF)
-		return false;
-
+		return;
+	
 	bool br = Menu2_Render();
-
+	
 	if(br)
-		return br;
-
+		return;
+	
 	if(ARXmenu.currentmode == AMCM_OFF)
-		return false;
-
-
+		return;
+	
+	
 	GRenderer->Clear(Renderer::ColorBuffer | Renderer::DepthBuffer);
 	
 	FLYING_OVER = 0;
-
+	
 	//-------------------------------------------------------------------------
-
+	
 	if(ARXmenu.currentmode == AMCM_NEWQUEST && ARXmenu.mda) {
 		
 		GRenderer->SetRenderState(Renderer::Fog, false);
 		GRenderer->SetRenderState(Renderer::AlphaBlending, false);
-
+		
 		if(ARXmenu.mda->BookBackground != NULL) {
 			GRenderer->SetRenderState(Renderer::AlphaBlending, false);
 			GRenderer->SetRenderState(Renderer::Fog, false);
 			GRenderer->SetRenderState(Renderer::DepthWrite, false);
 			GRenderer->SetRenderState(Renderer::DepthTest, false);
-
+			
 			EERIEDrawBitmap2(Rectf(Vec2f(0, 0), g_size.width(), g_size.height()), 0.9f, ARXmenu.mda->BookBackground, Color::white);
 		}
-
+		
 		BOOKZOOM = 1;
-
+		
 		ARX_INTERFACE_ManageOpenedBook();
-
-
+		
+		
 		if(ARXmenu.mda) {
-			long DONE = 0;
-
-			if(player.Skill_Redistribute == 0 && player.Attribute_Redistribute == 0)
-				DONE = 1;
+			bool DONE = (player.Skill_Redistribute == 0 && player.Attribute_Redistribute == 0);
 			
 			if(!ARXmenu.mda->flyover[FLYING_OVER].empty() ) //=ARXmenu.mda->flyover[FLYING_OVER];
 			{
 				if(FLYING_OVER != OLD_FLYING_OVER) {
 					
 					int t = Random::get(0, 2);
-
+					
 					pTextManage->Clear();
 					OLD_FLYING_OVER = FLYING_OVER;
 					UNICODE_ARXDrawTextCenteredScroll(hFontInGame,
@@ -392,7 +381,7 @@ bool ARX_Menu_Render() {
 			size *= 100;
 			
 			Color color = Color::none;
-
+			
 			//---------------------------------------------------------------------
 			// Button QUICK GENERATION
 			pos.x = (g_size.width() - (513 * g_sizeRatio.x)) * 0.5f;
@@ -406,31 +395,31 @@ bool ARX_Menu_Render() {
 			if(quickGenerateButtonMouseTestRect.contains(Vec2f(DANAEMouse))) {
 				SpecialCursor = CURSOR_INTERACTION_ON;
 				FLYING_OVER = BUTTON_QUICK_GENERATION;
-
+				
 				if(eeMousePressed1());
 				else if (eeMouseUp1())
 				{
 					player.m_cheatQuickGenButtonClickCount++;
 					int iSkin = player.skin;
 					ARX_SOUND_PlayMenu(SND_MENU_CLICK);
-
+					
 					if(bQuickGenFirstClick) {
 						ARX_PLAYER_MakeAverageHero();
 						bQuickGenFirstClick = false;
 					} else {
 						ARX_PLAYER_QuickGeneration();
 					}
-
+					
 					player.skin = checked_range_cast<char>(iSkin);
 				}
-
+				
 				color = Color(255, 255, 255);
 			}
 			else
 				color = Color(232, 204, 143);
-
+			
 			pTextManage->AddText(hFontMenu, ARXmenu.mda->str_button_quickgen, Vec2i(pos), color);
-
+			
 			//---------------------------------------------------------------------
 			// Button SKIN
 			pos.x = g_size.width() * 0.5f;
@@ -444,26 +433,26 @@ bool ARX_Menu_Render() {
 			if(skinButtonMouseTestRect.contains(Vec2f(DANAEMouse))) {
 				SpecialCursor = CURSOR_INTERACTION_ON;
 				FLYING_OVER = BUTTON_SKIN;
-
+				
 				if(eeMouseUp1()) {
 					player.m_cheatSkinButtonClickCount++;
 					BOOKZOOM = 1;
 					ARX_SOUND_PlayMenu(SND_MENU_CLICK);
 					player.skin++;
-
+					
 					if(player.skin > 3)
 						player.skin = 0;
-
+					
 					ARX_PLAYER_Restore_Skin();
 				}
-
+				
 				color = Color(255, 255, 255);
 			}
 			else
 				color = Color(232, 204, 143);
-
+			
 			pTextManage->AddText(hFontMenu, ARXmenu.mda->str_button_skin, Vec2i(pos), color);
-
+			
 			//---------------------------------------------------------------------
 			// Button DONE
 			pos.x = g_size.width() - (g_size.width() - 513 * g_sizeRatio.x) * 0.5f - 40 * g_sizeRatio.x;
@@ -477,9 +466,9 @@ bool ARX_Menu_Render() {
 			if(doneButtonMouseTestRect.contains(Vec2f(DANAEMouse))) {
 				if(DONE)
 					SpecialCursor = CURSOR_INTERACTION_ON;
-
+				
 				FLYING_OVER = BUTTON_DONE;
-
+				
 				if(DONE && eeMouseUp1()) {
 					if(player.m_cheatSkinButtonClickCount == 8 && player.m_cheatQuickGenButtonClickCount == 10) {
 						player.m_cheatSkinButtonClickCount = -2;
@@ -495,12 +484,10 @@ bool ARX_Menu_Render() {
 							ARX_PLAYER_Restore_Skin();
 							SP_HEAD = 0;
 						}
-
+						
 						ARX_SOUND_PlayMenu(SND_MENU_CLICK);
-
-						bFadeInOut = true;		//fade out
-						bFade = true;			//active le fade
-						iFadeAction = AMCM_OFF;
+						
+						MenuFader_start(true, true, AMCM_OFF);
 					}
 				} else {
 					if(DONE)
@@ -514,43 +501,41 @@ bool ARX_Menu_Render() {
 				else
 					color = Color(192, 192, 192);
 			}
-
+			
 			if(player.m_cheatSkinButtonClickCount < 0)
 				color = Color(255, 0, 255);
-
+			
 			pTextManage->AddText(hFontMenu, ARXmenu.mda->str_button_done, Vec2i(pos), color);
 		}
 	}
-
+	
 	EERIE_LIGHT * light = lightHandleGet(torchLightHandle);
 	light->pos.x = 0.f + GInput->getMousePosAbs().x - (g_size.width() >> 1);
 	light->pos.y = 0.f + GInput->getMousePosAbs().y - (g_size.height() >> 1);
-
+	
 	if(pTextManage) {
 		pTextManage->Update(g_framedelay);
 		pTextManage->Render();
 	}
-
+	
 	if(ARXmenu.currentmode != AMCM_CREDITS)
 		ARX_INTERFACE_RenderCursor(true);
-
+	
 	if(ARXmenu.currentmode == AMCM_NEWQUEST) {
-		if(ProcessFadeInOut(bFadeInOut, 0.1f)) {
+		if(ProcessFadeInOut(bFadeInOut)) {
 			switch(iFadeAction) {
 				case AMCM_OFF:
 					arxtime.resume();
 					ARX_MENU_NEW_QUEST_Clicked_QUIT();
 					iFadeAction = -1;
-					bFade = false;
+					g_menuFadeActive = false;
 					fFadeInOut = 0.f;
-
+					
 					if(pTextManage)
 						pTextManage->Clear();
-
+					
 					break;
 			}
 		}
 	}
-
-	return true;
 }

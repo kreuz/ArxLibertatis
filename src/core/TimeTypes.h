@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 Arx Libertatis Team (see the AUTHORS file)
+ * Copyright 2011-2013 Arx Libertatis Team (see the AUTHORS file)
  *
  * This file is part of Arx Libertatis.
  *
@@ -17,29 +17,12 @@
  * along with Arx Libertatis.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef ARX_GAME_MAGIC_SPELLRECOGNITION_H
-#define ARX_GAME_MAGIC_SPELLRECOGNITION_H
+#ifndef ARX_CORE_TIMETYPES_H
+#define ARX_CORE_TIMETYPES_H
 
-#include <string>
+#include "platform/Platform.h"
 
-#include "game/magic/Rune.h"
+typedef s64 ArxInstant;
+typedef s64 ArxDuration;
 
-const size_t MAX_SPELL_SYMBOLS = 6;
-extern Rune SpellSymbol[MAX_SPELL_SYMBOLS];
-
-extern size_t CurrSpellSymbol;
-extern std::string SpellMoves;
-extern std::string LAST_FAILED_SEQUENCE;
-
-void spellRecognitionInit();
-
-void ARX_SPELLS_ResetRecognition();
-
-void spellRecognitionPointsReset();
-void ARX_SPELLS_AddPoint(const Vec2s & pos);
-
-void ARX_SPELLS_Analyse();
-void ARX_SPELLS_AnalyseSYMBOL();
-bool ARX_SPELLS_AnalyseSPELL();
-
-#endif // ARX_GAME_MAGIC_SPELLRECOGNITION_H
+#endif // ARX_CORE_TIMETYPES_H

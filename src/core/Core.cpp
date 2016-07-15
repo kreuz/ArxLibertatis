@@ -111,6 +111,7 @@ ZeniMax Media Inc., Suite 120, Rockville, Maryland 20850 USA.
 #include "graphics/Renderer.h"
 #include "graphics/Vertex.h"
 #include "graphics/data/TextureContainer.h"
+#include "graphics/effects/DrawEffects.h"
 #include "graphics/effects/Fade.h"
 #include "graphics/effects/Fog.h"
 #include "graphics/image/Image.h"
@@ -164,7 +165,7 @@ class TextManager;
 Image savegame_thumbnail;
 
 extern TextManager	*pTextManage;
-extern unsigned long FORCE_TIME_RESTORE;
+extern ArxInstant FORCE_TIME_RESTORE;
 
 extern long		DONT_WANT_PLAYER_INZONE;
 extern size_t		TOTPDL;
@@ -347,8 +348,6 @@ static void PlayerLaunchArrow_Test(float aimratio, float poisonous, const Vec3f 
 
 	ARX_THROWN_OBJECT_Throw(PlayerEntityHandle, position, vect, quat, velocity, damages, poisonous);
 }
-
-extern unsigned long LAST_JUMP_ENDTIME;
 
 //*************************************************************************************
 // Switches from/to Game Mode/Editor Mode
@@ -672,7 +671,7 @@ static bool StrikeAimtime() {
 	
 	ARX_PLAYER_Remove_Invisibility();
 	
-	const unsigned long delta = arxtime.now_ul() - player.m_aimTime;
+	const ArxDuration delta = arxtime.now_ul() - player.m_aimTime;
 	player.m_strikeAimRatio = delta * (1.f+(1.f-GLOBAL_SLOWDOWN));
 
 	if(player.m_strikeAimRatio > player.Full_AimTime)

@@ -98,12 +98,10 @@ ZeniMax Media Inc., Suite 120, Rockville, Maryland 20850 USA.
 
 class TextureContainer;
 
-extern bool REFUSE_GAME_RETURN;
-
 struct DAMAGE_INFO {
 	short exist;
-	unsigned long start_time;
-	unsigned long lastupd;
+	ArxInstant start_time;
+	ArxInstant lastupd;
 	
 	DamageParameters params;
 };
@@ -290,7 +288,7 @@ float ARX_DAMAGES_DamagePlayer(float dmg, DamageType type, EntityHandle source) 
 			player.lifePool.current = 0.f;
 
 			if(alive) {
-				//REFUSE_GAME_RETURN = 1;
+				//g_canResumeGame = false;
 				ARX_PLAYER_BecomesDead();
 
 				if((type & DAMAGE_TYPE_FIRE) || (type & DAMAGE_TYPE_FAKEFIRE)) {
@@ -636,10 +634,10 @@ static void ARX_DAMAGES_PushIO(Entity * io_target, EntityHandle source, float po
 	}
 }
 
-float ARX_DAMAGES_DealDamages(EntityHandle target, float dmg, EntityHandle source, DamageType flags, Vec3f * pos)
+void ARX_DAMAGES_DealDamages(EntityHandle target, float dmg, EntityHandle source, DamageType flags, Vec3f * pos)
 {
 	if(!ValidIONum(target) || !ValidIONum(source))
-		return 0;
+		return;
 
 	Entity * io_target = entities[target];
 	Entity * io_source = entities[source];
@@ -677,13 +675,12 @@ float ARX_DAMAGES_DealDamages(EntityHandle target, float dmg, EntityHandle sourc
 
 		if(flags & DAMAGE_TYPE_PUSH)
 			ARX_DAMAGES_PushIO(io_target, source, damagesdone * ( 1.0f / 2 ));
-
+		
+		// TODO what is this code supposed to do ?
 		if((flags & DAMAGE_TYPE_MAGICAL) && !(flags & (DAMAGE_TYPE_FIRE | DAMAGE_TYPE_COLD))) {
 			damagesdone -= player.m_miscFull.resistMagic * ( 1.0f / 100 ) * damagesdone;
 			damagesdone = std::max(0.0f, damagesdone);
 		}
-
-		return damagesdone;
 	} else {
 		if(io_target->ioflags & IO_NPC) {
 			if(flags & DAMAGE_TYPE_POISON) {
@@ -716,17 +713,14 @@ float ARX_DAMAGES_DealDamages(EntityHandle target, float dmg, EntityHandle sourc
 
 			if(flags & DAMAGE_TYPE_PUSH)
 				ARX_DAMAGES_PushIO(io_target, source, damagesdone * ( 1.0f / 2 ));
-
+			
+			// TODO what is this code supposed to do ?
 			if((flags & DAMAGE_TYPE_MAGICAL) && !(flags & (DAMAGE_TYPE_FIRE | DAMAGE_TYPE_COLD))) {
 				damagesdone -= io_target->_npcdata->resist_magic * ( 1.0f / 100 ) * damagesdone;
 				damagesdone = std::max(0.0f, damagesdone);
 			}
-
-			return damagesdone;
 		}
 	}
-
-	return 0;
 }
 
 //*************************************************************************************
@@ -914,7 +908,7 @@ static void ARX_DAMAGES_AddVisual(DAMAGE_INFO & di, const Vec3f & pos, float dmg
 		num = Random::get(0, io->obj->vertexlist.size() / 4 - 1) * 4 + 1;
 	}
 	
-	unsigned long now = arxtime.now_ul();
+	ArxInstant now = arxtime.now_ul();
 	if(di.lastupd + 200 < now) {
 		di.lastupd = now;
 		if(di.params.type & DAMAGE_TYPE_MAGICAL) {
@@ -1489,10 +1483,9 @@ void ARX_DAMAGES_DurabilityCheck(Entity * io, float ratio)
 	}
 }
 
-void ARX_DAMAGES_DurabilityLoss(Entity * io, float loss)
-{
-	if(!io)
-		return;
+void ARX_DAMAGES_DurabilityLoss(Entity * io, float loss) {
+	
+	arx_assert(io);
 
 	io->durability -= loss;
 
@@ -1516,7 +1509,7 @@ void ARX_DAMAGES_DamagePlayerEquipment(float damages)
 	}
 }
 
-float ARX_DAMAGES_ComputeRepairPrice(Entity * torepair, Entity * blacksmith)
+float ARX_DAMAGES_ComputeRepairPrice(const Entity * torepair, const Entity * blacksmith)
 {
 	if(!torepair || !blacksmith) return -1.f;
 

@@ -447,7 +447,7 @@ static float clamp_and_invert(float z) {
 	return 1.f / std::max(z, near_clamp);
 }
 
-void EE_P(const Vec3f & in, TexturedVertex & out) {
+static void EE_P(const Vec3f & in, TexturedVertex & out) {
 	
 	float fZTemp = clamp_and_invert(in.z);
 	
@@ -943,12 +943,12 @@ static void EERIEPOLY_Add_PolyIn(EERIE_BKG_INFO * eg, EERIEPOLY * ep) {
 	eg->nbpolyin++;
 }
 
-static bool PointInBBox(const Vec3f & point, const EERIE_2D_BBOX & bb) {
+static bool PointInBBox(const Vec3f & point, const Rectf & bb) {
 	
-	if(   point.x > bb.max.x
-	   || point.x < bb.min.x
-	   || point.z > bb.max.y
-	   || point.z < bb.min.y
+	if(   point.x > bb.right
+	   || point.x < bb.left
+	   || point.z > bb.bottom
+	   || point.z < bb.top
 	)
 		return false;
 
@@ -970,14 +970,12 @@ void EERIEPOLY_Compute_PolyIn() {
 		long maxx = std::min(x + 2, ACTIVEBKG->Xsize - 1L);
 		long maxz = std::min(z + 2, ACTIVEBKG->Zsize - 1L);
 		
-		EERIE_2D_BBOX bb;
-		bb.min.x = (float)x * ACTIVEBKG->Xdiv - 10;
-		bb.max.x = (float)bb.min.x + ACTIVEBKG->Xdiv + 20;
-		bb.min.y = (float)z * ACTIVEBKG->Zdiv - 10;
-		bb.max.y = (float)bb.min.y + ACTIVEBKG->Zdiv + 20;
-		Vec3f bbcenter;
-		bbcenter.x = (bb.min.x + bb.max.x) * .5f;
-		bbcenter.z = (bb.min.y + bb.max.y) * .5f;
+		Vec2f bbmin = Vec2f(x * ACTIVEBKG->Xdiv - 10, z * ACTIVEBKG->Zdiv - 10);
+		Vec2f bbmax = Vec2f(bbmin.x + ACTIVEBKG->Xdiv + 20, bbmin.y + ACTIVEBKG->Zdiv + 20);
+		
+		Rectf bb = Rectf(bbmin, bbmax);
+		
+		Vec2f bbcenter = bb.center();
 		
 		for(long z2 = minz; z2 < maxz; z2++)
 		for(long x2 = minx; x2 < maxx; x2++) {
@@ -986,7 +984,7 @@ void EERIEPOLY_Compute_PolyIn() {
 			for(long l = 0; l < eg2->nbpoly; l++) {
 				EERIEPOLY *ep2 = &eg2->polydata[l];
 				
-				if(fartherThan(Vec2f(bbcenter.x, bbcenter.z), Vec2f(ep2->center.x, ep2->center.z), 120.f))
+				if(fartherThan(bbcenter, Vec2f(ep2->center.x, ep2->center.z), 120.f))
 					continue;
 				
 				long nbvert = (ep2->type & POLY_QUAD) ? 4 : 3;
@@ -1144,21 +1142,18 @@ void Draw3DObject(EERIE_3DOBJ *eobj, const Anglef & angle, const Vec3f & pos, co
 	if(!eobj)
 		return;
 	
-	TexturedVertex v;
-	TexturedVertex rv;
 	TexturedVertex vert_list[3];
 	
 	glm::mat4 rotation = toRotationMatrix(angle);
 	
 	for(size_t i = 0; i < eobj->vertexlist.size(); i++) {
-		v.p = eobj->vertexlist[i].v * scale;
+		Vec3f scaled = eobj->vertexlist[i].v * scale;
 		
-		rv.p = Vec3f(rotation * Vec4f(v.p, 1.f));
+		Vec3f rotated = Vec3f(rotation * Vec4f(scaled, 1.f));
 		
-		eobj->vertexlist3[i].v = (rv.p += pos);
+		eobj->vertexlist3[i].v = (rotated += pos);
 
-		Vec3f tempWorld = EE_RT(rv.p);
-		EE_P(tempWorld, eobj->vertexlist[i].vert);
+		EE_RTP(rotated, eobj->vertexlist[i].vert);
 	}
 
 	for(size_t i = 0; i < eobj->facelist.size(); i++) {

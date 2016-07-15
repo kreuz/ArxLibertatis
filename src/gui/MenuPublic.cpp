@@ -63,6 +63,7 @@ ZeniMax Media Inc., Suite 120, Rockville, Maryland 20850 USA.
 #include "gui/Interface.h"
 #include "gui/Menu.h"
 #include "gui/MenuWidgets.h"
+#include "gui/menu/MenuFader.h"
 
 #include "graphics/Math.h"
 #include "graphics/Renderer.h"
@@ -85,12 +86,6 @@ ZeniMax Media Inc., Suite 120, Rockville, Maryland 20850 USA.
 extern bool bQuickGenFirstClick;
 
 extern SavegameHandle LOADQUEST_SLOT;
-
-extern bool REFUSE_GAME_RETURN;
-
-extern bool bFade;
-extern bool	bFadeInOut;
-extern int iFadeAction;
 
 void ARXMenu_Private_Options_Video_SetResolution(bool fullscreen, int _iWidth, int _iHeight) {
 	
@@ -197,16 +192,6 @@ void ARXMenu_Options_Audio_SetMuted(bool mute) {
 	ARX_SOUND_MixerSetVolume(ARX_SOUND_MixerGame, volume);
 }
 
-bool ARXMenu_Options_Audio_SetEAX(bool _bEnable) {
-	
-	config.audio.eax = _bEnable;
-	
-	ARX_SOUND_SetReverb(config.audio.eax);
-	
-	return config.audio.eax;
-}
-
-
 void ARXMenu_Options_Audio_SetDevice(std::string device) {
 	
 	config.audio.device = device;
@@ -249,10 +234,6 @@ void ARXMenu_Options_Control_SetMouseSensitivity(int sensitivity) {
 	GInput->setMouseSensitivity(config.input.mouseSensitivity);
 }
 
-bool ARXMenu_CanResumeGame() {
-	return !REFUSE_GAME_RETURN;
-}
-
 void ARXMenu_ResumeGame() {
 	ARX_Menu_Resources_Release();
 	arxtime.resume();
@@ -260,9 +241,7 @@ void ARXMenu_ResumeGame() {
 }
 
 void ARXMenu_NewQuest() {
-	bFadeInOut = true;	//fade out
-	bFade = true;			//active le fade
-	iFadeAction = AMCM_NEWQUEST;	//action a la fin du fade
+	MenuFader_start(true, true, AMCM_NEWQUEST);
 	bQuickGenFirstClick = true;
 	player.gold = 0;
 	ARX_PLAYER_MakeFreshHero();
@@ -273,7 +252,7 @@ void ARXMenu_LoadQuest(SavegameHandle num) {
 	LOADQUEST_SLOT = num;
 
 	ARX_SOUND_PlayMenu(SND_MENU_CLICK);
-	REFUSE_GAME_RETURN = false;
+	g_canResumeGame = true;
 	ARX_MENU_Clicked_QUIT();
 }
 
@@ -284,16 +263,4 @@ void ARXMenu_SaveQuest(const std::string & name, SavegameHandle num) {
 	savegames.save(name, num.handleData(), savegame_thumbnail);
 	
 	ARX_SOUND_MixerResume(ARX_SOUND_MixerMenu);
-}
-
-void ARXMenu_Credits() {
-	bFadeInOut = true;	//fade out
-	bFade = true;			//active le fade
-	iFadeAction = AMCM_CREDITS;	//action a la fin du fade
-}
-
-void ARXMenu_Quit() {
-	bFadeInOut = true;		//fade out
-	bFade = true;				//active le fade
-	iFadeAction = AMCM_OFF;	//action a la fin du fade
 }

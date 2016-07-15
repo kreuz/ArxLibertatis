@@ -95,6 +95,7 @@ ZeniMax Media Inc., Suite 120, Rockville, Maryland 20850 USA.
 #include "graphics/Renderer.h"
 #include "graphics/Vertex.h"
 #include "graphics/data/TextureContainer.h"
+#include "graphics/effects/DrawEffects.h"
 #include "graphics/effects/Fade.h"
 #include "graphics/effects/Fog.h"
 #include "graphics/particle/ParticleManager.h"
@@ -133,8 +134,6 @@ extern bool		GLOBAL_MAGIC_MODE;
 
 extern ParticleManager * pParticleManager;
 
-extern unsigned long LAST_JUMP_ENDTIME;
-
 static const float WORLD_GRAVITY = 0.1f;
 static const float JUMP_GRAVITY = 0.02f;
 static const float STEP_DISTANCE = 120.f;
@@ -156,7 +155,7 @@ bool USE_PLAYERCOLLISIONS = true;
 bool BLOCK_PLAYER_CONTROLS = false;
 bool WILLRETURNTOCOMBATMODE = false;
 long DeadTime = 0;
-static unsigned long LastHungerSample = 0;
+static ArxInstant LastHungerSample = 0;
 static unsigned long ROTATE_START = 0;
 
 // Player Anims FLAGS/Vars
@@ -1322,7 +1321,7 @@ void ARX_PLAYER_Manage_Visual() {
 	
 	ARX_PROFILE_FUNC();
 	
-	unsigned long now = arxtime.now_ul();
+	ArxInstant now = arxtime.now_ul();
 	
 	if(player.m_currentMovement & PLAYER_ROTATE) {
 		if(ROTATE_START == 0) {
@@ -1913,10 +1912,10 @@ extern float MAX_ALLOWED_PER_SECOND;
 static long LAST_FIRM_GROUND = 1;
 static long TRUE_FIRM_GROUND = 1;
 float lastposy = -9999999.f;
-unsigned long REQUEST_JUMP = 0;
+ArxInstant REQUEST_JUMP = 0;
 extern float Original_framedelay;
 
-unsigned long LAST_JUMP_ENDTIME = 0;
+ArxInstant LAST_JUMP_ENDTIME = 0;
 
 static bool Valid_Jump_Pos() {
 	
@@ -2337,7 +2336,7 @@ void PlayerMovementIterate(float DeltaTime) {
 				
 				const float jump_up_time = 200.f;
 				const float jump_up_height = 130.f;
-				const unsigned long now = arxtime.now_ul();
+				const ArxInstant now = arxtime.now_ul();
 				const unsigned long elapsed = now - player.jumpstarttime;
 				float position = glm::clamp(float(elapsed) / jump_up_time, 0.f, 1.f);
 				

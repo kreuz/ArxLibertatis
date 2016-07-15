@@ -321,7 +321,7 @@ void Cedric_ApplyLightingFirstPartRefactor(Entity *io) {
 			if (io->sfx_time >= arxtime.now_ul())
 				io->sfx_time = arxtime.now_ul();
 		} else {
-			const unsigned long elapsed = arxtime.now_ul() - io->sfx_time;
+			const ArxDuration elapsed = arxtime.now_ul() - io->sfx_time;
 
 			if(elapsed > 0) {
 				if(elapsed < 3000) { // 5 seconds to red
@@ -461,12 +461,12 @@ void drawQuadRTP(const RenderMaterial & mat, TexturedQuad quat) {
 	RenderBatcher::getInstance().add(mat, quat);
 }
 
-void drawTriangle(const RenderMaterial & mat, const TexturedVertex * vertices) {
+void drawTriangle(const RenderMaterial & mat, const TexturedVertexUntransformed * vertices) {
 	
 	TexturedVertex projected[3];
-	EE_P(vertices[0].p, projected[0]);
-	EE_P(vertices[1].p, projected[1]);
-	EE_P(vertices[2].p, projected[2]);
+	EE_RTP(vertices[0].p, projected[0]);
+	EE_RTP(vertices[1].p, projected[1]);
+	EE_RTP(vertices[2].p, projected[2]);
 	projected[0].color = vertices[0].color;
 	projected[0].uv = vertices[0].uv;
 	projected[1].color = vertices[1].color;
@@ -524,13 +524,15 @@ static void Cedric_ApplyLighting(ShaderLight lights[], int lightsCount, EERIE_3D
 	}
 }
 
-static void UpdateBbox3d(EERIE_3DOBJ *eobj, EERIE_3D_BBOX & box3D) {
-
+static EERIE_3D_BBOX UpdateBbox3d(EERIE_3DOBJ *eobj) {
+	
+	EERIE_3D_BBOX box3D;
 	box3D.reset();
 
 	for(size_t i = 0 ; i < eobj->vertexlist.size(); i++) {
 		box3D.add(eobj->vertexlist3[i].v);
 	}
+	return box3D;
 }
 
 EERIE_2D_BBOX UpdateBbox2d(const EERIE_3DOBJ & eobj) {
@@ -553,6 +555,27 @@ EERIE_2D_BBOX UpdateBbox2d(const EERIE_3DOBJ & eobj) {
 	return box2D;
 }
 
+static EERIE_2D_BBOX Cedric_UpdateBbox2d(const EERIE_3DOBJ & eobj) {
+	
+	EERIE_2D_BBOX box2D;
+	box2D.reset();
+
+	for(size_t i = 0; i < eobj.vertexlist.size(); i++) {
+		const EERIE_VERTEX & vertex = eobj.vertexlist3[i];
+		
+		if(   vertex.vert.rhw > 0.f
+		   && vertex.vert.p.x >= -32000
+		   && vertex.vert.p.x <=  32000
+		   && vertex.vert.p.y >= -32000
+		   && vertex.vert.p.y <=  32000
+		) {
+			box2D.add(vertex.vert.p);
+		}
+	}
+	
+	return box2D;
+}
+
 void DrawEERIEInter_ModelTransform(EERIE_3DOBJ *eobj, const TransformInfo &t) {
 
 	for(size_t i = 0 ; i < eobj->vertexlist.size(); i++) {
@@ -570,9 +593,7 @@ void DrawEERIEInter_ModelTransform(EERIE_3DOBJ *eobj, const TransformInfo &t) {
 
 void DrawEERIEInter_ViewProjectTransform(EERIE_3DOBJ *eobj) {
 	for(size_t i = 0 ; i < eobj->vertexlist.size(); i++) {
-
-		Vec3f tempWorld = EE_RT(eobj->vertexlist3[i].v);
-		EE_P(tempWorld, eobj->vertexlist[i].vert);
+		EE_RTP(eobj->vertexlist3[i].v, eobj->vertexlist[i].vert);
 	}
 }
 
@@ -836,7 +857,7 @@ void DrawEERIEInter(EERIE_3DOBJ * eobj,
 
 	DrawEERIEInter_ModelTransform(eobj, t);
 	if(io) {
-		UpdateBbox3d(eobj, io->bbox3D);
+		io->bbox3D = UpdateBbox3d(eobj);
 	}
 
 	DrawEERIEInter_ViewProjectTransform(eobj);
@@ -1108,7 +1129,7 @@ static void Cedric_RenderObject(EERIE_3DOBJ * eobj, Skeleton * obj, Entity * io,
 	bool glow = false;
 	ColorRGBA glowColor;
 	if(io && (io->sfx_flag & SFX_TYPE_YLSIDE_DEATH) && io->show != SHOW_FLAG_TELEPORTING) {
-		const unsigned long elapsed = arxtime.now_ul() - io->sfx_time;
+		const ArxDuration elapsed = arxtime.now_ul() - io->sfx_time;
 		if(elapsed >= 3000 && elapsed < 6000) {
 			float ratio = (elapsed - 3000) * (1.0f / 3000);
 			glowColor = Color::gray(ratio).toRGB();
@@ -1465,27 +1486,7 @@ static void Cedric_ViewProjectTransform(EERIE_3DOBJ * eobj) {
 
 	for(size_t i = 0; i < eobj->vertexlist.size(); i++) {
 		EERIE_VERTEX * outVert = &eobj->vertexlist3[i];
-
-		Vec3f tempWorld = EE_RT(outVert->v);
-		EE_P(tempWorld, outVert->vert);
-	}
-}
-
-static void Cedric_UpdateBbox2d(const EERIE_3DOBJ & eobj, EERIE_2D_BBOX & box2D) {
-	
-	box2D.reset();
-
-	for(size_t i = 0; i < eobj.vertexlist.size(); i++) {
-		const EERIE_VERTEX & vertex = eobj.vertexlist3[i];
-		
-		if(   vertex.vert.rhw > 0.f
-		   && vertex.vert.p.x >= -32000
-		   && vertex.vert.p.x <=  32000
-		   && vertex.vert.p.y >= -32000
-		   && vertex.vert.p.y <=  32000
-		) {
-			box2D.add(vertex.vert.p);
-		}
+		EE_RTP(outVert->v, outVert->vert);
 	}
 }
 
@@ -1630,12 +1631,12 @@ void EERIEDrawAnimQuatUpdate(EERIE_3DOBJ * eobj,
 
 	Cedric_TransformVerts(eobj, pos);
 	if(io) {
-		UpdateBbox3d(eobj, io->bbox3D);
+		io->bbox3D = UpdateBbox3d(eobj);
 	}
 
 	Cedric_ViewProjectTransform(eobj);
 	if(io) {
-		Cedric_UpdateBbox2d(*eobj, io->bbox2D);
+		io->bbox2D = Cedric_UpdateBbox2d(*eobj);
 	}
 }
 
@@ -1660,7 +1661,7 @@ void EERIEDrawAnimQuatRender(EERIE_3DOBJ *eobj, const Vec3f & pos, Entity *io, f
 void AnimatedEntityRender(Entity * entity, float invisibility) {
 
 	Cedric_ViewProjectTransform(entity->obj);
-	Cedric_UpdateBbox2d(*entity->obj, entity->bbox2D);
+	entity->bbox2D = Cedric_UpdateBbox2d(*entity->obj);
 
 	EERIEDrawAnimQuatRender(entity->obj, entity->pos, entity, invisibility);
 }

@@ -27,6 +27,7 @@
 #include "game/NPC.h"
 #include "game/Player.h"
 #include "game/Spells.h"
+#include "graphics/effects/DrawEffects.h"
 #include "graphics/particle/Particle.h"
 #include "graphics/particle/ParticleEffects.h"
 #include "graphics/particle/ParticleParams.h"
@@ -310,6 +311,7 @@ void FireballSpell::Update() {
 	
 	if(!bExplo)
 	if(CheckAnythingInSphere(sphere, m_caster, CAS_NO_SAME_GROUP)) {
+		spawnFireHitParticle(eCurPos, 0);
 		ARX_BOOMS_Add(eCurPos);
 		LaunchFireballBoom(eCurPos, m_level);
 		

@@ -76,7 +76,9 @@ ZeniMax Media Inc., Suite 120, Rockville, Maryland 20850 USA.
 #include "gui/Credits.h"
 #include "gui/TextManager.h"
 #include "gui/menu/MenuCursor.h"
+#include "gui/menu/MenuFader.h"
 #include "gui/widget/CycleTextWidget.h"
+#include "gui/widget/PanelWidget.h"
 
 #include "graphics/Draw.h"
 #include "graphics/DrawLine.h"
@@ -101,8 +103,6 @@ extern bool newFullscreen;
 // Imported global variables and functions
 extern ARX_MENU_DATA ARXmenu;
 
-extern bool REFUSE_GAME_RETURN;
-
 bool bNoMenu=false;
 
 MenuCursor * pMenuCursor = NULL;
@@ -115,14 +115,13 @@ extern TextWidget * pMenuElementApply;
 float ARXTimeMenu;
 float ARXDiffTimeMenu;
 
-bool bFade=false;
-bool bFadeInOut=false;
-int iFadeAction=-1;
-float fFadeInOut=0.f;
+
+
+
 
 void ARX_QuickSave() {
 	
-	if(REFUSE_GAME_RETURN) {
+	if(!g_canResumeGame) {
 		return;
 	}
 	
@@ -147,7 +146,7 @@ static bool ARX_LoadGame(const SaveGame & save) {
 	
 	long ret = ARX_CHANGELEVEL_Load(save.savefile);
 	
-	REFUSE_GAME_RETURN = false;
+	g_canResumeGame = true;
 
 	return ret != -1;
 }
@@ -205,76 +204,7 @@ static void Check_Apply() {
 	}
 }
 
-static void FadeInOut(float _fVal) {
 
-	TexturedVertex d3dvertex[4];
-
-	ColorRGBA iColor = Color::gray(_fVal).toRGB();
-	d3dvertex[0].p.x=0;
-	d3dvertex[0].p.y=0;
-	d3dvertex[0].p.z=0.f;
-	d3dvertex[0].rhw=1.f;
-	d3dvertex[0].color=iColor;
-
-	d3dvertex[1].p.x=static_cast<float>(g_size.width());
-	d3dvertex[1].p.y=0;
-	d3dvertex[1].p.z=0.f;
-	d3dvertex[1].rhw=1.f;
-	d3dvertex[1].color=iColor;
-
-	d3dvertex[2].p.x=0;
-	d3dvertex[2].p.y=static_cast<float>(g_size.height());
-	d3dvertex[2].p.z=0.f;
-	d3dvertex[2].rhw=1.f;
-	d3dvertex[2].color=iColor;
-
-	d3dvertex[3].p.x=static_cast<float>(g_size.width());
-	d3dvertex[3].p.y=static_cast<float>(g_size.height());
-	d3dvertex[3].p.z=0.f;
-	d3dvertex[3].rhw=1.f;
-	d3dvertex[3].color=iColor;
-
-	GRenderer->ResetTexture(0);
-	GRenderer->SetBlendFunc(BlendZero, BlendInvSrcColor);
-
-	GRenderer->SetRenderState(Renderer::AlphaBlending, true);
-	GRenderer->SetRenderState(Renderer::DepthWrite, false);
-	GRenderer->SetRenderState(Renderer::DepthTest, false);
-	GRenderer->SetCulling(CullNone);
-
-	EERIEDRAWPRIM(Renderer::TriangleStrip, d3dvertex, 4, true);
-
-	GRenderer->SetRenderState(Renderer::AlphaBlending, false);
-	GRenderer->SetRenderState(Renderer::DepthWrite, true);
-	GRenderer->SetRenderState(Renderer::DepthTest, true);
-	GRenderer->SetCulling(CullCCW);
-}
-
-bool ProcessFadeInOut(bool _bFadeIn, float _fspeed) {
-
-	FadeInOut(fFadeInOut);
-
-	if(!bFade)
-		return true;
-
-	if(_bFadeIn) {
-		fFadeInOut += _fspeed * ARXDiffTimeMenu * (1.f/100);
-
-		if(fFadeInOut > 1.f) {
-			fFadeInOut = 1.f;
-			bFade = false;
-		}
-	} else {
-		fFadeInOut -= _fspeed * ARXDiffTimeMenu * (1.f/100);
-
-		if(fFadeInOut < 0.f) {
-			fFadeInOut = 0.f;
-			bFade = false;
-		}
-	}
-
-	return false;
-}
 
 bool Menu2_Render() {
 	
@@ -375,7 +305,7 @@ bool Menu2_Render() {
 	
 	if(pWindowMenu)
 	if(   (pWindowMenu->m_currentPageId != MAIN && pWindowMenu->m_currentPageId != NEW_QUEST && pWindowMenu->m_currentPageId != CREDITS)
-	   || (pWindowMenu->m_currentPageId == NEW_QUEST && ARXMenu_CanResumeGame())
+	   || (pWindowMenu->m_currentPageId == NEW_QUEST && g_canResumeGame)
 	) {
 		if(!bScroll) {
 			pWindowMenu->fAngle=90.f;
@@ -408,26 +338,20 @@ bool Menu2_Render() {
 	
 	g_thumbnailCursor.render();
 	
-	if(ProcessFadeInOut(bFadeInOut,0.1f)) {
+	if(ProcessFadeInOut(bFadeInOut)) {
 		switch(iFadeAction) {
 			case AMCM_CREDITS:
 				ARX_MENU_Clicked_CREDITS();
-				iFadeAction=-1;
-				bFadeInOut=false;
-				bFade=true;
+				MenuFader_start(true, false, -1);
 				break;
 			case AMCM_NEWQUEST:
 				ARX_MENU_Clicked_NEWQUEST();
-				iFadeAction=-1;
-				bFadeInOut=false;
-				bFade=true;
+				MenuFader_start(true, false, -1);
 				cinematicBorder.reset();
 				break;
 			case AMCM_OFF:
-				ARX_MENU_Clicked_QUIT_GAME();
-				iFadeAction=-1;
-				bFadeInOut=false;
-				bFade=true;
+				mainApp->quit();
+				MenuFader_start(true, false, -1);
 				break;
 		}
 	}
@@ -508,14 +432,14 @@ MENUSTATE CWindowMenu::Render() {
 	
 	MENUSTATE eMS=NOP;
 	
-	BOOST_FOREACH(MenuPage * page, m_pages) {
+	{MenuPage * page; BOOST_FOREACH(page, m_pages) {
 		if(m_currentPageId == page->eMenuState) {
 			eMS = page->Update(m_pos);
 			
 			if(eMS != NOP)
 				break;
 		}
-	}
+	}}
 	
 	// Draw backgound and border
 	GRenderer->SetRenderState(Renderer::AlphaBlending, true);
@@ -532,7 +456,7 @@ MENUSTATE CWindowMenu::Render() {
 	                 RATIO_X(m_border->m_size.x), RATIO_Y(m_border->m_size.y)),
 	                 0, m_border, Color::white);
 	
-	BOOST_FOREACH(MenuPage * page, m_pages) {
+	{MenuPage * page; BOOST_FOREACH(page, m_pages) {
 		if(m_currentPageId == page->eMenuState) {
 			page->Render();
 			
@@ -541,7 +465,7 @@ MENUSTATE CWindowMenu::Render() {
 			
 			break;
 		}
-	}
+	}}
 	
 	GRenderer->SetRenderState(Renderer::AlphaBlending, false);
 	
@@ -593,11 +517,11 @@ void MenuPage::addCenter(Widget * widget, bool centerX) {
 	}
 	
 	int iDy = widget->m_rect.height();
-
-	BOOST_FOREACH(Widget * widget, m_children.m_widgets) {
+	
+	{Widget * w; BOOST_FOREACH(w, m_children.m_widgets) {
 		iDy += m_rowSpacing;
-		iDy += widget->m_rect.height();
-	}
+		iDy += w->m_rect.height();
+	}}
 
 	int iDepY = m_rect.left;
 
@@ -611,11 +535,11 @@ void MenuPage::addCenter(Widget * widget, bool centerX) {
 		dy = iDepY - m_children.m_widgets[0]->m_rect.top;
 	}
 	
-	BOOST_FOREACH(Widget * widget, m_children.m_widgets) {
-		iDepY += (widget->m_rect.height()) + m_rowSpacing;
+	{Widget * w; BOOST_FOREACH(w, m_children.m_widgets) {
+		iDepY += (w->m_rect.height()) + m_rowSpacing;
 		
-		widget->Move(Vec2f(0, dy));
-	}
+		w->Move(Vec2f(0, dy));
+	}}
 
 	widget->Move(Vec2f(dx, iDepY));
 
@@ -743,7 +667,7 @@ void MenuPage::UpdateText() {
 	}
 }
 
-Widget * MenuPage::GetTouch(bool keyTouched, int keyId, InputKeyId* pInputKeyId, bool _bValidateTest)
+TextWidget * MenuPage::GetTouch(bool keyTouched, int keyId, InputKeyId* pInputKeyId, bool _bValidateTest)
 {
 	int iMouseButton = keyTouched ? 0 : GInput->getMouseButtonClicked();
 	
@@ -759,9 +683,7 @@ Widget * MenuPage::GetTouch(bool keyTouched, int keyId, InputKeyId* pInputKeyId,
 		TextWidget * textWidget = static_cast<TextWidget *>(m_selected);
 
 		if(_bValidateTest) {
-			if(m_selected->m_id == BUTTON_MENUOPTIONS_CONTROLS_CUST_ACTIONCOMBINE1 ||
-			   m_selected->m_id == BUTTON_MENUOPTIONS_CONTROLS_CUST_ACTIONCOMBINE2)
-			{
+			if(textWidget->m_isKeybind && textWidget->m_keybindAction == CONTROLS_CUST_ACTION) {
 				bool bOk=true;
 
 				if((iMouseButton & Mouse::ButtonBase) && !(iMouseButton & Mouse::WheelBase)) {
@@ -877,194 +799,21 @@ MENUSTATE MenuPage::Update(Vec2f pos) {
 	
 	//check les shortcuts
 	if(!bEdit) {
-		BOOST_FOREACH(Widget * widget, m_children.m_widgets) {
-			arx_assert(widget);
+		
+		{Widget * w; BOOST_FOREACH(w, m_children.m_widgets) {
+			arx_assert(w);
 			
-			if(widget->m_shortcut != -1) {
-				if(GInput->isKeyPressedNowUnPressed(widget->m_shortcut)) {
-					bEdit = widget->OnMouseClick();
-					m_selected = widget;
-					return widget->m_targetMenu;
+			if(w->m_shortcut != -1) {
+				if(GInput->isKeyPressedNowUnPressed(w->m_shortcut)) {
+					bEdit = w->OnMouseClick();
+					m_selected = w;
+					return w->m_targetMenu;
 				}
 			}
-		}
+		}}
 	}
 	
 	return NOP;
-}
-
-static void UpdateGameKey(bool bEdit, Widget * widget, InputKeyId inputKeyId) {
-
-	if(!bEdit && widget) {
-		switch(widget->m_id) {
-		case BUTTON_MENUOPTIONS_CONTROLS_CUST_JUMP1:
-		case BUTTON_MENUOPTIONS_CONTROLS_CUST_JUMP2:
-			config.setActionKey(CONTROLS_CUST_JUMP,widget->m_id-BUTTON_MENUOPTIONS_CONTROLS_CUST_JUMP1,inputKeyId);
-			break;
-		case BUTTON_MENUOPTIONS_CONTROLS_CUST_MAGICMODE1:
-		case BUTTON_MENUOPTIONS_CONTROLS_CUST_MAGICMODE2:
-			config.setActionKey(CONTROLS_CUST_MAGICMODE,widget->m_id-BUTTON_MENUOPTIONS_CONTROLS_CUST_MAGICMODE1,inputKeyId);
-			break;
-		case BUTTON_MENUOPTIONS_CONTROLS_CUST_STEALTHMODE1:
-		case BUTTON_MENUOPTIONS_CONTROLS_CUST_STEALTHMODE2:
-			config.setActionKey(CONTROLS_CUST_STEALTHMODE,widget->m_id-BUTTON_MENUOPTIONS_CONTROLS_CUST_STEALTHMODE1,inputKeyId);
-			break;
-		case BUTTON_MENUOPTIONS_CONTROLS_CUST_WALKFORWARD1:
-		case BUTTON_MENUOPTIONS_CONTROLS_CUST_WALKFORWARD2:
-			config.setActionKey(CONTROLS_CUST_WALKFORWARD,widget->m_id-BUTTON_MENUOPTIONS_CONTROLS_CUST_WALKFORWARD1,inputKeyId);
-			break;
-		case BUTTON_MENUOPTIONS_CONTROLS_CUST_WALKBACKWARD1:
-		case BUTTON_MENUOPTIONS_CONTROLS_CUST_WALKBACKWARD2:
-			config.setActionKey(CONTROLS_CUST_WALKBACKWARD,widget->m_id-BUTTON_MENUOPTIONS_CONTROLS_CUST_WALKBACKWARD1,inputKeyId);
-			break;
-		case BUTTON_MENUOPTIONS_CONTROLS_CUST_STRAFELEFT1:
-		case BUTTON_MENUOPTIONS_CONTROLS_CUST_STRAFELEFT2:
-			config.setActionKey(CONTROLS_CUST_STRAFELEFT,widget->m_id-BUTTON_MENUOPTIONS_CONTROLS_CUST_STRAFELEFT1,inputKeyId);
-			break;
-		case BUTTON_MENUOPTIONS_CONTROLS_CUST_STRAFERIGHT1:
-		case BUTTON_MENUOPTIONS_CONTROLS_CUST_STRAFERIGHT2:
-			config.setActionKey(CONTROLS_CUST_STRAFERIGHT,widget->m_id-BUTTON_MENUOPTIONS_CONTROLS_CUST_STRAFERIGHT1,inputKeyId);
-			break;
-		case BUTTON_MENUOPTIONS_CONTROLS_CUST_LEANLEFT1:
-		case BUTTON_MENUOPTIONS_CONTROLS_CUST_LEANLEFT2:
-			config.setActionKey(CONTROLS_CUST_LEANLEFT,widget->m_id-BUTTON_MENUOPTIONS_CONTROLS_CUST_LEANLEFT1,inputKeyId);
-			break;
-		case BUTTON_MENUOPTIONS_CONTROLS_CUST_LEANRIGHT1:
-		case BUTTON_MENUOPTIONS_CONTROLS_CUST_LEANRIGHT2:
-			config.setActionKey(CONTROLS_CUST_LEANRIGHT,widget->m_id-BUTTON_MENUOPTIONS_CONTROLS_CUST_LEANRIGHT1,inputKeyId);
-			break;
-		case BUTTON_MENUOPTIONS_CONTROLS_CUST_CROUCH1:
-		case BUTTON_MENUOPTIONS_CONTROLS_CUST_CROUCH2:
-			config.setActionKey(CONTROLS_CUST_CROUCH,widget->m_id-BUTTON_MENUOPTIONS_CONTROLS_CUST_CROUCH1,inputKeyId);
-			break;
-		case BUTTON_MENUOPTIONS_CONTROLS_CUST_USE1:
-		case BUTTON_MENUOPTIONS_CONTROLS_CUST_USE2:
-			config.setActionKey(CONTROLS_CUST_USE,widget->m_id-BUTTON_MENUOPTIONS_CONTROLS_CUST_USE1,inputKeyId);
-			break;
-		case BUTTON_MENUOPTIONS_CONTROLS_CUST_ACTIONCOMBINE1:
-		case BUTTON_MENUOPTIONS_CONTROLS_CUST_ACTIONCOMBINE2:
-			config.setActionKey(CONTROLS_CUST_ACTION,widget->m_id-BUTTON_MENUOPTIONS_CONTROLS_CUST_ACTIONCOMBINE1,inputKeyId);
-			break;
-		case BUTTON_MENUOPTIONS_CONTROLS_CUST_INVENTORY1:
-		case BUTTON_MENUOPTIONS_CONTROLS_CUST_INVENTORY2:
-			config.setActionKey(CONTROLS_CUST_INVENTORY,widget->m_id-BUTTON_MENUOPTIONS_CONTROLS_CUST_INVENTORY1,inputKeyId);
-			break;
-		case BUTTON_MENUOPTIONS_CONTROLS_CUST_BOOK1:
-		case BUTTON_MENUOPTIONS_CONTROLS_CUST_BOOK2:
-			config.setActionKey(CONTROLS_CUST_BOOK,widget->m_id-BUTTON_MENUOPTIONS_CONTROLS_CUST_BOOK1,inputKeyId);
-			break;
-		case BUTTON_MENUOPTIONS_CONTROLS_CUST_BOOKCHARSHEET1:
-		case BUTTON_MENUOPTIONS_CONTROLS_CUST_BOOKCHARSHEET2:
-			config.setActionKey(CONTROLS_CUST_BOOKCHARSHEET,widget->m_id-BUTTON_MENUOPTIONS_CONTROLS_CUST_BOOKCHARSHEET1,inputKeyId);
-			break;
-		case BUTTON_MENUOPTIONS_CONTROLS_CUST_BOOKSPELL1:
-		case BUTTON_MENUOPTIONS_CONTROLS_CUST_BOOKSPELL2:
-			config.setActionKey(CONTROLS_CUST_BOOKSPELL,widget->m_id-BUTTON_MENUOPTIONS_CONTROLS_CUST_BOOKSPELL1,inputKeyId);
-			break;
-		case BUTTON_MENUOPTIONS_CONTROLS_CUST_BOOKMAP1:
-		case BUTTON_MENUOPTIONS_CONTROLS_CUST_BOOKMAP2:
-			config.setActionKey(CONTROLS_CUST_BOOKMAP,widget->m_id-BUTTON_MENUOPTIONS_CONTROLS_CUST_BOOKMAP1,inputKeyId);
-			break;
-		case BUTTON_MENUOPTIONS_CONTROLS_CUST_BOOKQUEST1:
-		case BUTTON_MENUOPTIONS_CONTROLS_CUST_BOOKQUEST2:
-			config.setActionKey(CONTROLS_CUST_BOOKQUEST,widget->m_id-BUTTON_MENUOPTIONS_CONTROLS_CUST_BOOKQUEST1,inputKeyId);
-			break;
-		case BUTTON_MENUOPTIONS_CONTROLS_CUST_DRINKPOTIONLIFE1:
-		case BUTTON_MENUOPTIONS_CONTROLS_CUST_DRINKPOTIONLIFE2:
-			config.setActionKey(CONTROLS_CUST_DRINKPOTIONLIFE,widget->m_id-BUTTON_MENUOPTIONS_CONTROLS_CUST_DRINKPOTIONLIFE1,inputKeyId);
-			break;
-		case BUTTON_MENUOPTIONS_CONTROLS_CUST_DRINKPOTIONMANA1:
-		case BUTTON_MENUOPTIONS_CONTROLS_CUST_DRINKPOTIONMANA2:
-			config.setActionKey(CONTROLS_CUST_DRINKPOTIONMANA,widget->m_id-BUTTON_MENUOPTIONS_CONTROLS_CUST_DRINKPOTIONMANA1,inputKeyId);
-			break;
-		case BUTTON_MENUOPTIONS_CONTROLS_CUST_TORCH1:
-		case BUTTON_MENUOPTIONS_CONTROLS_CUST_TORCH2:
-			config.setActionKey(CONTROLS_CUST_TORCH,widget->m_id-BUTTON_MENUOPTIONS_CONTROLS_CUST_TORCH1,inputKeyId);
-			break;
-		case BUTTON_MENUOPTIONS_CONTROLS_CUST_CANCELCURSPELL1:
-		case BUTTON_MENUOPTIONS_CONTROLS_CUST_CANCELCURSPELL2:    
-			config.setActionKey(CONTROLS_CUST_CANCELCURSPELL,widget->m_id-BUTTON_MENUOPTIONS_CONTROLS_CUST_CANCELCURSPELL1,inputKeyId);
-			break;
-		case BUTTON_MENUOPTIONS_CONTROLS_CUST_PRECAST1:
-		case BUTTON_MENUOPTIONS_CONTROLS_CUST_PRECAST1_2:
-			config.setActionKey(CONTROLS_CUST_PRECAST1,widget->m_id-BUTTON_MENUOPTIONS_CONTROLS_CUST_PRECAST1,inputKeyId);
-			break;
-		case BUTTON_MENUOPTIONS_CONTROLS_CUST_PRECAST2:
-		case BUTTON_MENUOPTIONS_CONTROLS_CUST_PRECAST2_2:
-			config.setActionKey(CONTROLS_CUST_PRECAST2,widget->m_id-BUTTON_MENUOPTIONS_CONTROLS_CUST_PRECAST2,inputKeyId);
-			break;
-		case BUTTON_MENUOPTIONS_CONTROLS_CUST_PRECAST3:
-		case BUTTON_MENUOPTIONS_CONTROLS_CUST_PRECAST3_2:
-			config.setActionKey(CONTROLS_CUST_PRECAST3,widget->m_id-BUTTON_MENUOPTIONS_CONTROLS_CUST_PRECAST3,inputKeyId);
-			break;
-		case BUTTON_MENUOPTIONS_CONTROLS_CUST_WEAPON1:
-		case BUTTON_MENUOPTIONS_CONTROLS_CUST_WEAPON2:
-			config.setActionKey(CONTROLS_CUST_WEAPON,widget->m_id-BUTTON_MENUOPTIONS_CONTROLS_CUST_WEAPON1,inputKeyId);
-			break;
-		case BUTTON_MENUOPTIONS_CONTROLS_CUST_QUICKLOAD:
-		case BUTTON_MENUOPTIONS_CONTROLS_CUST_QUICKLOAD2:
-			config.setActionKey(CONTROLS_CUST_QUICKLOAD,widget->m_id-BUTTON_MENUOPTIONS_CONTROLS_CUST_QUICKLOAD,inputKeyId);
-			break;
-		case BUTTON_MENUOPTIONS_CONTROLS_CUST_QUICKSAVE:
-		case BUTTON_MENUOPTIONS_CONTROLS_CUST_QUICKSAVE2:
-			config.setActionKey(CONTROLS_CUST_QUICKSAVE,widget->m_id-BUTTON_MENUOPTIONS_CONTROLS_CUST_QUICKSAVE,inputKeyId);
-			break;
-		case BUTTON_MENUOPTIONS_CONTROLS_CUST_TURNLEFT1:
-		case BUTTON_MENUOPTIONS_CONTROLS_CUST_TURNLEFT2:
-			config.setActionKey(CONTROLS_CUST_TURNLEFT,widget->m_id-BUTTON_MENUOPTIONS_CONTROLS_CUST_TURNLEFT1,inputKeyId);
-			break;
-		case BUTTON_MENUOPTIONS_CONTROLS_CUST_TURNRIGHT1:
-		case BUTTON_MENUOPTIONS_CONTROLS_CUST_TURNRIGHT2:
-			config.setActionKey(CONTROLS_CUST_TURNRIGHT,widget->m_id-BUTTON_MENUOPTIONS_CONTROLS_CUST_TURNRIGHT1,inputKeyId);
-			break;
-		case BUTTON_MENUOPTIONS_CONTROLS_CUST_LOOKUP1:
-		case BUTTON_MENUOPTIONS_CONTROLS_CUST_LOOKUP2:
-			config.setActionKey(CONTROLS_CUST_LOOKUP,widget->m_id-BUTTON_MENUOPTIONS_CONTROLS_CUST_LOOKUP1,inputKeyId);
-			break;
-		case BUTTON_MENUOPTIONS_CONTROLS_CUST_LOOKDOWN1:
-		case BUTTON_MENUOPTIONS_CONTROLS_CUST_LOOKDOWN2:
-			config.setActionKey(CONTROLS_CUST_LOOKDOWN,widget->m_id-BUTTON_MENUOPTIONS_CONTROLS_CUST_LOOKDOWN1,inputKeyId);
-			break;
-		case BUTTON_MENUOPTIONS_CONTROLS_CUST_STRAFE1:
-		case BUTTON_MENUOPTIONS_CONTROLS_CUST_STRAFE2:
-			config.setActionKey(CONTROLS_CUST_STRAFE,widget->m_id-BUTTON_MENUOPTIONS_CONTROLS_CUST_STRAFE1,inputKeyId);
-			break;
-		case BUTTON_MENUOPTIONS_CONTROLS_CUST_CENTERVIEW1:
-		case BUTTON_MENUOPTIONS_CONTROLS_CUST_CENTERVIEW2:
-			config.setActionKey(CONTROLS_CUST_CENTERVIEW,widget->m_id-BUTTON_MENUOPTIONS_CONTROLS_CUST_CENTERVIEW1,inputKeyId);
-			break;
-		case BUTTON_MENUOPTIONS_CONTROLS_CUST_FREELOOK1:
-		case BUTTON_MENUOPTIONS_CONTROLS_CUST_FREELOOK2:
-			config.setActionKey(CONTROLS_CUST_FREELOOK,widget->m_id-BUTTON_MENUOPTIONS_CONTROLS_CUST_FREELOOK1,inputKeyId);
-			break;
-		case BUTTON_MENUOPTIONS_CONTROLS_CUST_PREVIOUS1:
-		case BUTTON_MENUOPTIONS_CONTROLS_CUST_PREVIOUS2:
-			config.setActionKey(CONTROLS_CUST_PREVIOUS,widget->m_id-BUTTON_MENUOPTIONS_CONTROLS_CUST_PREVIOUS1,inputKeyId);
-			break;
-		case BUTTON_MENUOPTIONS_CONTROLS_CUST_NEXT1:
-		case BUTTON_MENUOPTIONS_CONTROLS_CUST_NEXT2:    
-			config.setActionKey(CONTROLS_CUST_NEXT,widget->m_id-BUTTON_MENUOPTIONS_CONTROLS_CUST_NEXT1,inputKeyId);
-			break;
-		case BUTTON_MENUOPTIONS_CONTROLS_CUST_CROUCHTOGGLE1:
-		case BUTTON_MENUOPTIONS_CONTROLS_CUST_CROUCHTOGGLE2:    
-			config.setActionKey(CONTROLS_CUST_CROUCHTOGGLE,widget->m_id-BUTTON_MENUOPTIONS_CONTROLS_CUST_CROUCHTOGGLE1,inputKeyId);
-			break;
-		case BUTTON_MENUOPTIONS_CONTROLS_CUST_UNEQUIPWEAPON1:
-		case BUTTON_MENUOPTIONS_CONTROLS_CUST_UNEQUIPWEAPON2:    
-			config.setActionKey(CONTROLS_CUST_UNEQUIPWEAPON,widget->m_id-BUTTON_MENUOPTIONS_CONTROLS_CUST_UNEQUIPWEAPON1,inputKeyId);
-			break;
-		case BUTTON_MENUOPTIONS_CONTROLS_CUST_MINIMAP1:
-		case BUTTON_MENUOPTIONS_CONTROLS_CUST_MINIMAP2:
-			config.setActionKey(CONTROLS_CUST_MINIMAP,widget->m_id-BUTTON_MENUOPTIONS_CONTROLS_CUST_MINIMAP1,inputKeyId);
-			break;
-		case BUTTON_MENUOPTIONS_CONTROLS_CUST_TOGGLE_FULLSCREEN1:
-		case BUTTON_MENUOPTIONS_CONTROLS_CUST_TOGGLE_FULLSCREEN2:
-			config.setActionKey(CONTROLS_CUST_TOGGLE_FULLSCREEN,widget->m_id-BUTTON_MENUOPTIONS_CONTROLS_CUST_TOGGLE_FULLSCREEN1,inputKeyId);
-			break;
-		default:
-			break;
-		}
-	}
 }
 
 void MenuPage::Render() {
@@ -1072,10 +821,10 @@ void MenuPage::Render() {
 	if(bNoMenu)
 		return;
 	
-	BOOST_FOREACH(Widget * widget, m_children.m_widgets) {
-		widget->Update();
-		widget->Render();
-	}
+	{Widget * w; BOOST_FOREACH(w, m_children.m_widgets) {
+		w->Update();
+		w->Render();
+	}}
 	
 	//HIGHLIGHT
 	if(m_selected) {
@@ -1146,10 +895,14 @@ void MenuPage::Render() {
 				}
 				
 				InputKeyId inputKeyId;
-				Widget * widget = GetTouch(keyTouched, keyId, &inputKeyId, true);
+				TextWidget * widget = GetTouch(keyTouched, keyId, &inputKeyId, true);
 				
 				if(widget) {
-					UpdateGameKey(bEdit,widget, inputKeyId);
+					if(!bEdit) {
+						if(widget->m_isKeybind) {
+							config.setActionKey(widget->m_keybindAction, widget->m_keybindIndex, inputKeyId);
+						}
+					}
 					bReInit = true;
 				}
 			}
@@ -1182,32 +935,24 @@ void MenuPage::drawDebug() {
 	m_children.drawDebug();
 }
 
-void MenuPage::ReInitActionKey()
-{
-	int iID=BUTTON_MENUOPTIONS_CONTROLS_CUST_JUMP1;
-	int iI=NUM_ACTION_KEY;
+void MenuPage::ReInitActionKey() {
 	
-	while(iI--) {
-		int iTab=(iID-BUTTON_MENUOPTIONS_CONTROLS_CUST_JUMP1)>>1;
-
-		Widget * widget = m_children.GetZoneWithID(MenuButton(iID));
-
-		if(widget) {
-			if(widget) {
-				m_selected = widget;
-				GetTouch(true, config.actions[iTab].key[0], NULL, false);
-			}
-
-			widget = m_children.GetZoneWithID(MenuButton(iID + 1));
-
-			if(widget) {
-				m_selected = widget;
-				GetTouch(true, config.actions[iTab].key[1], NULL, false);
-			}
+	{Widget * w; BOOST_FOREACH(w, m_children.m_widgets) {
+		if(w->type() == WidgetType_Panel) {
+			PanelWidget * p = static_cast<PanelWidget *>(w);
+			
+			{Widget * c; BOOST_FOREACH(c, p->m_children) {
+				if(c->type() == WidgetType_Text) {
+					TextWidget * t = static_cast<TextWidget *>(c);
+					
+					if(t->m_isKeybind) {
+						m_selected = t;
+						GetTouch(true, config.actions[t->m_keybindAction].key[t->m_keybindIndex], NULL, false);
+					}
+				}
+			}}
 		}
-
-		iID+=2;
-	}
+	}}
 }
 
 

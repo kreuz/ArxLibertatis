@@ -175,8 +175,6 @@ extern long DeadTime;
 static const float CURRENT_BASE_FOCAL = 310.f;
 static const float defaultCameraFocal = 350.f;
 
-extern float LAST_FADEVALUE;
-
 extern Cinematic* ControlCinematique;
 extern EERIE_3DOBJ * arrowobj;
 
@@ -657,7 +655,7 @@ ARX_PROGRAM_OPTION("skiplogo", "", "Skip logos at startup", &skipLogo);
 static bool HandleGameFlowTransitions() {
 	
 	const int TRANSITION_DURATION = 3600;
-	static unsigned long TRANSITION_START = 0;
+	static ArxInstant TRANSITION_START = 0;
 
 	if(GameFlow::getTransition() == GameFlow::NoTransition) {
 		return false;
@@ -1647,7 +1645,7 @@ void ArxGame::updateInput() {
 	GInput->update();
 	
 	// Handle double clicks.
-	const ActionKey & button = config.actions[CONTROLS_CUST_ACTION].key[0];
+	const ActionKey & button = config.actions[CONTROLS_CUST_ACTION];
 	if((button.key[0] != -1 && (button.key[0] & Mouse::ButtonBase)
 	    && GInput->getMouseButtonDoubleClick(button.key[0], 300))
 	   || (button.key[1] != -1 && (button.key[1] & Mouse::ButtonBase)
@@ -1935,7 +1933,7 @@ void ArxGame::updateLevel() {
 		
 		SpellBase * spell = spells.getSpellByCaster(PlayerEntityHandle, SPELL_MAGIC_SIGHT);
 		if(spell) {
-			long duration = long(arxtime.now_ul()) - long(spell->m_timcreation);
+			ArxDuration duration = arxtime.now_ul() - spell->m_timcreation;
 			magicSightZoom = glm::clamp(float(duration) / 500.f, 0.f, 1.f);
 		}
 		

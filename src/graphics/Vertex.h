@@ -48,6 +48,25 @@ ZeniMax Media Inc., Suite 120, Rockville, Maryland 20850 USA.
 #include "platform/Platform.h"
 #include "math/Vector.h"
 
+struct TexturedVertexUntransformed {
+	
+	Vec3f p;
+	ColorRGBA color;
+	Vec2f uv;
+	
+	TexturedVertexUntransformed()
+		: p(Vec3f_ZERO)
+		, color(0x00000000)
+		, uv(0.f, 0.f)
+	{}
+	
+	TexturedVertexUntransformed(const Vec3f & _p, ColorRGBA _color, Vec2f _uv)
+		: p(_p)
+		, color(_color)
+		, uv(_uv)
+	{}
+};
+
 struct TexturedVertex {
 	
 	Vec3f p;

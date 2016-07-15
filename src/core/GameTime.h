@@ -47,6 +47,7 @@ ZeniMax Media Inc., Suite 120, Rockville, Maryland 20850 USA.
 #ifndef ARX_CORE_GAMETIME_H
 #define ARX_CORE_GAMETIME_H
 
+#include "core/TimeTypes.h"
 #include "graphics/Math.h"
 
 #include "platform/Time.h"
@@ -63,7 +64,7 @@ public:
 	void pause();
 	void resume();
 	
-	void force_time_restore(const unsigned long time);
+	void force_time_restore(const ArxInstant time);
 	
 	// TODO probably the source of the need to clip frame_delay
 	void force_frame_time_restore(const unsigned long v) {
@@ -75,8 +76,8 @@ public:
 		return m_now_us / 1000.0f;
 	}
 	
-	unsigned long now_ul() const {
-		return checked_range_cast<unsigned long>(m_now_us / 1000);
+	ArxInstant now_ul() const {
+		return checked_range_cast<ArxInstant>(m_now_us / 1000);
 	}
 	
 	void update(const bool & use_pause = true) {

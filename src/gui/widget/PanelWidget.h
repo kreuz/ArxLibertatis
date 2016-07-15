@@ -40,8 +40,11 @@ public:
 	Widget * IsMouseOver(const Vec2f & mousePos) const;
 	Widget * GetZoneWithID(MenuButton zoneId);
 	
-private:
-	std::vector<Widget *>	vElement;
+	virtual WidgetType type() const {
+		return WidgetType_Panel;
+	};
+	
+	std::vector<Widget *> m_children;
 };
 
 #endif // ARX_GUI_WIDGET_PANELWIDGET_H

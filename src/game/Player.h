@@ -65,7 +65,7 @@ static const size_t MAX_EQUIPED = 12;
 
 struct ARX_INTERFACE_MEMORIZE_SPELL {
 	bool bSpell;
-	unsigned long lTimeCreation;
+	ArxInstant lTimeCreation;
 	Rune iSpellSymbols[6];
 	
 	ARX_INTERFACE_MEMORIZE_SPELL()
@@ -246,7 +246,7 @@ struct ARXCHARACTER {
 	long m_weaponBlocked;
 	
 	// Jump Sub-data
-	unsigned long jumpstarttime;
+	ArxInstant jumpstarttime;
 	float jumplastposition;
 	JumpPhase jumpphase;
 	
@@ -302,7 +302,7 @@ struct ARXCHARACTER {
 	
 	long AimTime;
 	
-	unsigned long m_aimTime;
+	ArxInstant m_aimTime;
 	
 	ResourcePool lifePool;
 	ResourcePool manaPool;
@@ -423,6 +423,7 @@ extern std::vector<KEYRING_SLOT> Keyring;
 extern bool BLOCK_PLAYER_CONTROLS;
 extern bool USE_PLAYERCOLLISIONS;
 extern bool WILLRETURNTOCOMBATMODE;
+extern ArxInstant LAST_JUMP_ENDTIME;
 
 void ARX_PLAYER_MakeSpHero();
 void ARX_PLAYER_LoadHeroAnimsAndMesh();

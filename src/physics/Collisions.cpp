@@ -396,28 +396,29 @@ bool IsAnyNPCInPlatform(Entity * pfrm) {
 		) {
 			Cylinder cyl = GetIOCyl(io);
 
-			if(CylinderPlatformCollide(cyl, pfrm) != 0.f)
+			if(CylinderPlatformCollide(cyl, pfrm)) {
 				return true;
+			}
 		}
 	}
 
 	return false;
 }
 
-float CylinderPlatformCollide(const Cylinder & cyl, Entity * io) {
+bool CylinderPlatformCollide(const Cylinder & cyl, Entity * io) {
  
 	float miny = io->bbox3D.min.y;
 	float maxy = io->bbox3D.max.y;
 	
 	if(maxy <= cyl.origin.y + cyl.height || miny >= cyl.origin.y) {
-		return 0.f;
+		return false;
 	}
 	
 	if(In3DBBoxTolerance(cyl.origin, io->bbox3D, cyl.radius)) {
-		return 1.f;
+		return true;
 	}
 	
-	return 0.f;
+	return false;
 }
 
 static long NPC_IN_CYLINDER = 0;
@@ -476,18 +477,17 @@ float CheckAnythingInCylinder(const Cylinder & cyl, Entity * ioo, long flags) {
 	float anything = 999999.f;
 	
 	// TODO copy-paste background tiles
-	int tilex = cyl.origin.x * ACTIVEBKG->Xmul;
-	int tilez = cyl.origin.z * ACTIVEBKG->Zmul;
+	int tilex = int(cyl.origin.x * ACTIVEBKG->Xmul);
+	int tilez = int(cyl.origin.z * ACTIVEBKG->Zmul);
+	int radius = int((cyl.radius + 100) * ACTIVEBKG->Xmul);
 	
-	int radius = (cyl.radius + 100) * ACTIVEBKG->Xmul;
+	int minx = std::max(tilex - radius, 0);
+	int maxx = std::min(tilex + radius, ACTIVEBKG->Xsize - 1);
+	int minz = std::max(tilez - radius, 0);
+	int maxz = std::min(tilez + radius, ACTIVEBKG->Zsize - 1);
 	
-	short minx = std::max(tilex - radius, 0);
-	short maxx = std::min(tilex + radius, ACTIVEBKG->Xsize - 1);
-	short minz = std::max(tilez - radius, 0);
-	short maxz = std::min(tilez + radius, ACTIVEBKG->Zsize - 1);
-	
-	for(short z = minz; z <= maxz; z++)
-	for(short x = minx; x <= maxx; x++) {
+	for(int z = minz; z <= maxz; z++)
+	for(int x = minx; x <= maxx; x++) {
 		float nearest = 99999999.f;
 
 		for(long num = 0; num < 4; num++) {
@@ -972,17 +972,17 @@ bool CheckEverythingInSphere(const Sphere & sphere, EntityHandle source, EntityH
 const EERIEPOLY * CheckBackgroundInSphere(const Sphere & sphere) {
 	
 	// TODO copy-paste background tiles
-	short tilex = sphere.origin.x * ACTIVEBKG->Xmul;
-	short tilez = sphere.origin.z * ACTIVEBKG->Zmul;
-	short radius = (sphere.radius * ACTIVEBKG->Xmul) + 2;
+	int tilex = int(sphere.origin.x * ACTIVEBKG->Xmul);
+	int tilez = int(sphere.origin.z * ACTIVEBKG->Zmul);
+	int radius = int(sphere.radius * ACTIVEBKG->Xmul) + 2;
 
-	short minx = std::max(tilex - radius, 0);
-	short maxx = std::min(tilex + radius, ACTIVEBKG->Xsize - 1);
-	short minz = std::max(tilez - radius, 0);
-	short maxz = std::min(tilez + radius, ACTIVEBKG->Zsize - 1);
+	int minx = std::max(tilex - radius, 0);
+	int maxx = std::min(tilex + radius, ACTIVEBKG->Xsize - 1);
+	int minz = std::max(tilez - radius, 0);
+	int maxz = std::min(tilez + radius, ACTIVEBKG->Zsize - 1);
 
-	for(short z = minz; z <= maxz; z++)
-	for(short x = minx; x <= maxx; x++) {
+	for(int z = minz; z <= maxz; z++)
+	for(int x = minx; x <= maxx; x++) {
 		const EERIE_BKG_INFO & feg = ACTIVEBKG->fastdata[x][z];
 
 		for(long k = 0; k < feg.nbpoly; k++) {
@@ -1011,17 +1011,17 @@ bool CheckAnythingInSphere(const Sphere & sphere, EntityHandle source, CASFlags 
 		ARX_PROFILE("Background Collision");
 		
 		// TODO copy-paste background tiles
-		short tilex = sphere.origin.x * ACTIVEBKG->Xmul;
-		short tilez = sphere.origin.z * ACTIVEBKG->Zmul;
-		short radius = (sphere.radius * ACTIVEBKG->Xmul) + 2;
+		int tilex = int(sphere.origin.x * ACTIVEBKG->Xmul);
+		int tilez = int(sphere.origin.z * ACTIVEBKG->Zmul);
+		int radius = int(sphere.radius * ACTIVEBKG->Xmul) + 2;
 		
-		short minx = std::max(tilex - radius, 0);
-		short maxx = std::min(tilex + radius, ACTIVEBKG->Xsize - 1);
-		short minz = std::max(tilez - radius, 0);
-		short maxz = std::min(tilez + radius, ACTIVEBKG->Zsize - 1);
+		int minx = std::max(tilex - radius, 0);
+		int maxx = std::min(tilex + radius, ACTIVEBKG->Xsize - 1);
+		int minz = std::max(tilez - radius, 0);
+		int maxz = std::min(tilez + radius, ACTIVEBKG->Zsize - 1);
 
-		for(short z = minz; z <= maxz; z++)
-		for(short x = minx; x <= maxx; x++) {
+		for(int z = minz; z <= maxz; z++)
+		for(int x = minx; x <= maxx; x++) {
 			const EERIE_BKG_INFO & feg = ACTIVEBKG->fastdata[x][z];
 			for(long k = 0; k < feg.nbpoly; k++) {
 				const EERIEPOLY & ep = feg.polydata[k];

@@ -131,9 +131,6 @@ ZeniMax Media Inc., Suite 120, Rockville, Maryland 20850 USA.
 extern float Original_framedelay;
 extern EERIE_3DOBJ *arrowobj;
 
-extern EntityHandle LastSelectedIONum;
-
-//-----------------------------------------------------------------------------
 struct ARX_INTERFACE_HALO_STRUCT
 {
 	Entity  * io;
@@ -188,7 +185,7 @@ bool				DRAGGING = false;
 bool				MAGICMODE = false;
 long				SpecialCursor=0;
 
-unsigned long		COMBAT_MODE_ON_START_TIME = 0;
+ArxInstant COMBAT_MODE_ON_START_TIME = 0;
 static long SPECIAL_DRAW_WEAPON = 0;
 bool bGCroucheToggle=false;
 
@@ -909,7 +906,7 @@ long CSEND=0;
 long MOVE_PRECEDENCE=0;
 
 
-extern unsigned long REQUEST_JUMP;
+extern ArxInstant REQUEST_JUMP;
 //-----------------------------------------------------------------------------
 void ArxGame::managePlayerControls() {
 	
@@ -1708,7 +1705,7 @@ void ArxGame::manageKeyMouse() {
 		
 		if(!GInput->actionPressed(CONTROLS_CUST_STRAFE)) {
 			arxtime.update();
-			const unsigned long now = arxtime.now_ul();
+			const ArxInstant now = arxtime.now_ul();
 
 			if(GInput->actionPressed(CONTROLS_CUST_TURNLEFT)) {
 				if(!pushTime.turnLeft)
@@ -1731,7 +1728,7 @@ void ArxGame::manageKeyMouse() {
 
 		if(USE_PLAYERCOLLISIONS) {
 			arxtime.update();
-			const unsigned long now = arxtime.now_ul();
+			const ArxInstant now = arxtime.now_ul();
 
 			if(GInput->actionPressed(CONTROLS_CUST_LOOKUP)) {
 				if(!pushTime.lookUp)
@@ -1777,14 +1774,14 @@ void ArxGame::manageKeyMouse() {
 			bool dragging = GInput->getMouseButtonRepeat(Mouse::Button_0);
 			
 			static bool mouseInBorder = false;
-			static unsigned long mouseInBorderTime = 0;
+			static ArxInstant mouseInBorderTime = 0;
 			
 			if(!bRenderInCursorMode || (!dragging && !GInput->isMouseInWindow())) {
 				mouseInBorder = false;
 			} else {
 				
 				int borderSize = 10;
-				unsigned long borderDelay = 100;
+				ArxDuration borderDelay = 100;
 				if(!dragging && !mainApp->getWindow()->isFullScreen()) {
 					borderSize = 50;
 					borderDelay = 200;
@@ -1965,8 +1962,8 @@ void ArxGame::manageEntityDescription() {
 	}
 }
 
+EntityHandle LastSelectedIONum = EntityHandle();
 
-//-----------------------------------------------------------------------------
 void ArxGame::manageEditorControls() {
 	
 	ARX_PROFILE_FUNC();

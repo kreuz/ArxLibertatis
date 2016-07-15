@@ -99,7 +99,7 @@ ZeniMax Media Inc., Suite 120, Rockville, Maryland 20850 USA.
 
 
 extern bool GLOBAL_MAGIC_MODE;
-unsigned long FORCE_TIME_RESTORE = 0;
+ArxInstant FORCE_TIME_RESTORE = 0;
 extern Vec3f WILL_RESTORE_PLAYER_POSITION;
 extern bool WILL_RESTORE_PLAYER_POSITION_FLAG;
 extern bool GMOD_RESET;
@@ -125,7 +125,7 @@ static Entity * ARX_CHANGELEVEL_Pop_IO(const std::string & idString, EntityInsta
 
 static fs::path CURRENT_GAME_FILE;
 
-static unsigned long ARX_CHANGELEVEL_DesiredTime = 0;
+static ArxInstant ARX_CHANGELEVEL_DesiredTime = 0;
 static long CONVERT_CREATED = 0;
 long DONT_WANT_PLAYER_INZONE = 0;
 static SaveBlock * g_currentSavedGame = NULL;
@@ -1111,7 +1111,7 @@ static long ARX_CHANGELEVEL_Push_IO(const Entity * io, long level) {
 	memcpy(dat, &ais, sizeof(ARX_CHANGELEVEL_IO_SAVE));
 	pos += sizeof(ARX_CHANGELEVEL_IO_SAVE);
 
-	const unsigned long timm = arxtime.now_ul();
+	const ArxInstant timm = arxtime.now_ul();
 
 	for(int i = 0; i < MAX_TIMER_SCRIPT; i++) {
 		SCR_TIMER & timer = scr_timer[i];
@@ -2142,7 +2142,7 @@ static Entity * ARX_CHANGELEVEL_Pop_IO(const std::string & idString, EntityInsta
 			// TODO if the script has changed since the last save, this position may be invalid
 			
 			const unsigned long tim = checked_range_cast<unsigned long>(ats->tim);
-			const unsigned long tt = ARX_CHANGELEVEL_DesiredTime + tim;
+			const ArxInstant tt = ARX_CHANGELEVEL_DesiredTime + tim;
 			scr_timer[num].tim = tt;
 			
 			scr_timer[num].times = ats->times;
@@ -2168,7 +2168,7 @@ static Entity * ARX_CHANGELEVEL_Pop_IO(const std::string & idString, EntityInsta
 				pos += sizeof(ARX_CHANGELEVEL_NPC_IO_SAVE);
 				
 				io->_npcdata->absorb = as->absorb;
-				io->_npcdata->aimtime = static_cast<unsigned int>(as->aimtime);
+				io->_npcdata->aimtime = static_cast<ArxDuration>(as->aimtime);
 				io->_npcdata->armor_class = as->armor_class;
 				io->_npcdata->behavior = Behaviour::load(as->behavior); // TODO save/load flags
 				io->_npcdata->behavior_param = as->behavior_param;
@@ -2683,7 +2683,7 @@ static bool ARX_CHANGELEVEL_PopLevel(long instance, bool reloadflag) {
 	LoadLevelScreen(instance);
 	
 	if(firstTime) {
-		unsigned long ulDTime = checked_range_cast<unsigned long>(ARX_CHANGELEVEL_DesiredTime);
+		ArxInstant ulDTime = ARX_CHANGELEVEL_DesiredTime;
 		for(long i = 0; i < MAX_TIMER_SCRIPT; i++) {
 			if(scr_timer[i].exist) {
 				scr_timer[i].tim = ulDTime;
@@ -2884,7 +2884,7 @@ long ARX_CHANGELEVEL_Load(const fs::path & savefile) {
 		progressBarAdvance(2.f);
 		LoadLevelScreen(pld.level);
 		
-		const unsigned long fPldTime = static_cast<unsigned long>(pld.time); // TODO save/load time
+		const ArxInstant fPldTime = static_cast<ArxInstant>(pld.time); // TODO save/load time
 		DanaeClearLevel();
 		progressBarAdvance(2.f);
 		LoadLevelScreen(pld.level);

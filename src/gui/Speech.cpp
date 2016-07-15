@@ -118,12 +118,12 @@ void ARX_SPEECH_ClearAll()
 	}
 }
 
-long ARX_SPEECH_Add(const std::string & text, long duration) {
+void ARX_SPEECH_Add(const std::string & text) {
 	
 	if(text.empty())
-		return -1;
+		return;
 	
-	unsigned long now = arxtime.now_ul();
+	ArxInstant now = arxtime.now_ul();
 	if(now == 0) {
 		now = 1;
 	}
@@ -139,21 +139,12 @@ long ARX_SPEECH_Add(const std::string & text, long duration) {
 		
 		// Sets creation time
 		speech[i].timecreation = now;
-		
-		// Sets/computes speech duration
-		if(duration == -1) {
-			speech[i].duration = 2000 + text.length() * 60;
-		} else {
-			speech[i].duration = duration;
-		}
-		
+		speech[i].duration = 2000 + text.length() * 60;
 		speech[i].text = text;
-		
-		// Successfull allocation
-		return speech[i].duration;
+		return;
 	}
 	
-	return -1;
+	LogInfo << "Failed to add speech: " << text;
 }
 
 static bool isLastSpeech(size_t index) {
@@ -400,7 +391,7 @@ long ARX_SPEECH_AddSpeech(Entity * io, const std::string & data, long mood,
 		io->lastspeechflag = 0;
 		aspeech[num].text.clear();
 		aspeech[num].text = _output;
-		aspeech[num].duration = std::max(aspeech[num].duration, (unsigned long)(strlen(_output.c_str()) + 1) * 100);
+		aspeech[num].duration = std::max(aspeech[num].duration, ArxDuration((strlen(_output.c_str()) + 1) * 100));
 		
 		sample = data;
 	}
@@ -427,7 +418,7 @@ long ARX_SPEECH_AddSpeech(Entity * io, const std::string & data, long mood,
 
 void ARX_SPEECH_Update() {
 	
-	unsigned long now = arxtime.now_ul();
+	ArxInstant now = arxtime.now_ul();
 
 	if(cinematicBorder.isActive() || BLOCK_PLAYER_CONTROLS)
 		ARX_CONVERSATION_CheckAcceleratedSpeech();

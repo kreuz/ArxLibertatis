@@ -707,20 +707,17 @@ static void drawDebugMaterials() {
 				continue;
 			}
 			
-			bool valid = true;
 			bool bvalid = false;
 			Vec3f p[4];
 			for(size_t i = 0; i < ((ep->type & POLY_QUAD) ? 4u : 3u); i++) {
 				TexturedVertex tv;
-				tv.p = EE_RT(ep->v[i].p);
-				valid = valid && (tv.p.z > 0.000001f);
-				EE_P(tv.p, tv);
+				EE_RTP(ep->v[i].p, tv);
 				bvalid = bvalid || (tv.p.x >= g_size.left && tv.p.x < g_size.right
 				                 && tv.p.y >= g_size.top && tv.p.y < g_size.bottom);
 				p[i] = tv.p;
 			}
 			
-			if(!valid || !bvalid) {
+			if(!bvalid) {
 				continue;
 			}
 			
@@ -812,7 +809,7 @@ static void drawDebugMaterials() {
 			oss << '(' << puv[i].x << ',' << puv[i].y << ')';
 			std::string text = oss.str();
 			
-			Vec2f textpos = pp[i];
+			Vec2i textpos = Vec2i(pp[i]);
 			if(pp[i].y < c.y) {
 				textpos.y -= hFontDebug->getLineHeight();
 			}
@@ -846,7 +843,7 @@ struct DebugRay {
 	{}
 };
 
-std::vector<DebugRay> debugRays;
+static std::vector<DebugRay> debugRays;
 
 void debug::drawRay(Vec3f start, Vec3f dir, Color color, float duration) {
 	DebugRay ray = DebugRay(start, dir, color, arxtime.now_f() + duration * 1000);
@@ -930,7 +927,11 @@ void drawDebugRender() {
 			ARX_DAMAGES_DrawDebug();
 			break;
 		}
-		default: return;
+		case DebugView_None:
+		case DebugViewCount: {
+			arx_assert(false);
+			return;
+		}
 	}
 	
 	s32 width = hFontDebug->getTextSize(ss.str()).x;

@@ -795,6 +795,7 @@ set(GRAPHICS_SOURCES
 	src/graphics/data/BackgroundEdit.cpp
 	src/graphics/data/Progressive.cpp
 	src/graphics/data/TextureContainer.cpp
+	src/graphics/effects/BlobShadow.cpp
 	src/graphics/effects/DrawEffects.cpp
 	src/graphics/effects/Fade.cpp
 	src/graphics/effects/Field.cpp
@@ -856,6 +857,7 @@ set(GUI_SOURCES
 	src/gui/hud/PlayerInventory.cpp
 	src/gui/hud/SecondaryInventory.cpp
 	src/gui/menu/MenuCursor.cpp
+	src/gui/menu/MenuFader.cpp
 	src/gui/widget/ButtonWidget.cpp
 	src/gui/widget/CheckboxWidget.cpp
 	src/gui/widget/CycleTextWidget.cpp

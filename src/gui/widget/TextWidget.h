@@ -22,6 +22,7 @@
 
 #include <boost/function.hpp>
 
+#include "core/Config.h"
 #include "graphics/Color.h"
 #include "gui/widget/Widget.h"
 
@@ -39,6 +40,11 @@ public:
 	
 	boost::function<void(TextWidget *)> clicked;	// NOLINT
 	
+	// TODO followind fields only used for keybinds
+	bool m_isKeybind;
+	ControlAction m_keybindAction;
+	int m_keybindIndex;
+	
 public:
 	TextWidget(MenuButton id, Font * font, const std::string & text, Vec2f pos = Vec2f_ZERO);
 	virtual ~TextWidget();
@@ -52,6 +58,10 @@ public:
 	void RenderMouseOver();
 	
 	bool OnMouseDoubleClick();
+	
+	virtual WidgetType type() const {
+		return WidgetType_Text;
+	};
 };
 
 #endif // ARX_GUI_WIDGET_TEXTWIDGET_H

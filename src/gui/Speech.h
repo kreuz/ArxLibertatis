@@ -49,6 +49,7 @@ ZeniMax Media Inc., Suite 120, Rockville, Maryland 20850 USA.
 
 #include <string>
 
+#include "core/TimeTypes.h"
 #include "game/GameTypes.h"
 #include "audio/AudioTypes.h"
 #include "math/Angle.h"
@@ -143,8 +144,8 @@ struct ARX_SPEECH {
 	audio::SampleId sample;
 	long mood;
 	SpeechFlags flags;
-	unsigned long time_creation;
-	unsigned long duration;
+	ArxInstant time_creation;
+	ArxDuration duration;
 	float fDeltaY;
 	int iTimeScroll;
 	float fPixelScroll;
@@ -190,7 +191,7 @@ void ARX_SPEECH_Check();
  * Add a raw text message to the "system" log (top of the screen).
  * This message will be displayed as-is.
  */
-long ARX_SPEECH_Add(const std::string & text, long duration = -1);
+void ARX_SPEECH_Add(const std::string & text);
 void ARX_SPEECH_ClearAll();
 
 /*!
