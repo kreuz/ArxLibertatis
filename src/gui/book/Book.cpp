@@ -40,6 +40,7 @@
 #include "gui/MiniMap.h"
 #include "gui/Speech.h"
 #include "gui/TextManager.h"
+#include "input/Input.h"
 #include "scene/GameSound.h"
 #include "scene/Interactive.h"
 #include "script/Script.h"
@@ -369,7 +370,7 @@ static void RenderBookPlayerCharacter() {
 		GRenderer->SetRenderState(Renderer::DepthTest, true);
 		GRenderer->GetTextureStage(0)->setMipFilter(TextureStage::FilterNone);
 		GRenderer->SetRenderState(Renderer::AlphaBlending, false);
-		PopAllTriangleList();
+		PopAllTriangleListOpaque();
 		GRenderer->SetRenderState(Renderer::AlphaBlending, true);
 		PopAllTriangleListTransparency();
 		GRenderer->SetRenderState(Renderer::AlphaBlending, false);
@@ -1510,7 +1511,7 @@ void ARX_INTERFACE_ManageOpenedBook_SpellsDraw() {
 			DrawBookTextCenter(hFontInBook, Vec2f(208, 90), spellInfo.name, Color::none);
 			
 			for(size_t si = 0; si < MAX_SPEECH; si++) {
-				if(speech[si].timecreation > 0)
+				if(speech[si].timecreation > ArxInstant_ZERO)
 					FLYING_OVER=0;
 			}
 			
@@ -1560,7 +1561,7 @@ void ARX_INTERFACE_ManageOpenedBook_SpellsDraw() {
 						player.SpellToMemorize.iSpellSymbols[j] = spellInfo.symbols[j];
 					}
 					
-					player.SpellToMemorize.lTimeCreation = arxtime.now_ul();
+					player.SpellToMemorize.lTimeCreation = arxtime.now();
 				}
 			} else {
 				color = Color(168, 208, 223, 255);

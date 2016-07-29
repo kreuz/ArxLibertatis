@@ -88,7 +88,7 @@ ZeniMax Media Inc., Suite 120, Rockville, Maryland 20850 USA.
 #include "graphics/Vertex.h"
 #include "graphics/data/Mesh.h"
 #include "graphics/data/TextureContainer.h"
-#include "graphics/effects/DrawEffects.h"
+#include "graphics/effects/PolyBoom.h"
 #include "graphics/effects/Halo.h"
 #include "graphics/particle/ParticleEffects.h"
 #include "graphics/texture/TextureStage.h"
@@ -185,7 +185,7 @@ bool				DRAGGING = false;
 bool				MAGICMODE = false;
 long				SpecialCursor=0;
 
-ArxInstant COMBAT_MODE_ON_START_TIME = 0;
+ArxInstant COMBAT_MODE_ON_START_TIME = ArxInstant_ZERO;
 static long SPECIAL_DRAW_WEAPON = 0;
 bool bGCroucheToggle=false;
 
@@ -1177,7 +1177,7 @@ void ArxGame::managePlayerControls() {
 	
 	// Checks JUMP Key Status.
 	if(player.jumpphase == NotJumping && GInput->actionNowPressed(CONTROLS_CUST_JUMP)) {
-		REQUEST_JUMP = arxtime.now_ul();
+		REQUEST_JUMP = arxtime.now();
 	}
 	
 	// MAGIC
@@ -1402,9 +1402,10 @@ void ArxGame::managePlayerControls() {
 	   && config.input.autoReadyWeapon
 	) {
 		if(eeMouseDown1()) {
-			COMBAT_MODE_ON_START_TIME = arxtime.now_ul();
+			// TODO use os time
+			COMBAT_MODE_ON_START_TIME = arxtime.now();
 		} else {
-			if(arxtime.now_f() - COMBAT_MODE_ON_START_TIME > 10) {
+			if(arxtime.now() - COMBAT_MODE_ON_START_TIME > ArxDurationMs(10)) {
 				ARX_INTERFACE_Combat_Mode(1);
 			}
 		}
@@ -1705,7 +1706,7 @@ void ArxGame::manageKeyMouse() {
 		
 		if(!GInput->actionPressed(CONTROLS_CUST_STRAFE)) {
 			arxtime.update();
-			const ArxInstant now = arxtime.now_ul();
+			const ArxInstant now = arxtime.now();
 
 			if(GInput->actionPressed(CONTROLS_CUST_TURNLEFT)) {
 				if(!pushTime.turnLeft)
@@ -1728,7 +1729,7 @@ void ArxGame::manageKeyMouse() {
 
 		if(USE_PLAYERCOLLISIONS) {
 			arxtime.update();
-			const ArxInstant now = arxtime.now_ul();
+			const ArxInstant now = arxtime.now();
 
 			if(GInput->actionPressed(CONTROLS_CUST_LOOKUP)) {
 				if(!pushTime.lookUp)
@@ -1774,17 +1775,17 @@ void ArxGame::manageKeyMouse() {
 			bool dragging = GInput->getMouseButtonRepeat(Mouse::Button_0);
 			
 			static bool mouseInBorder = false;
-			static ArxInstant mouseInBorderTime = 0;
+			static ArxInstant mouseInBorderTime = ArxInstant_ZERO;
 			
 			if(!bRenderInCursorMode || (!dragging && !GInput->isMouseInWindow())) {
 				mouseInBorder = false;
 			} else {
 				
 				int borderSize = 10;
-				ArxDuration borderDelay = 100;
+				ArxDuration borderDelay = ArxDurationMs(100);
 				if(!dragging && !mainApp->getWindow()->isFullScreen()) {
 					borderSize = 50;
-					borderDelay = 200;
+					borderDelay = ArxDurationMs(200);
 				}
 				
 				int distLeft = DANAEMouse.x - g_size.left;
@@ -1797,7 +1798,7 @@ void ArxGame::manageKeyMouse() {
 				   || (!dragging && distBottom < g_size.height() / 4 && distRight <= borderSize)
 				   || (!dragging && distTop <= 4 * borderSize && distRight <= 4 * borderSize)) {
 					borderSize = 2;
-					borderDelay = 600;
+					borderDelay = ArxDurationMs(600);
 				}
 				
 				mouseDiff = Vec2f_ZERO;
@@ -1826,11 +1827,11 @@ void ArxGame::manageKeyMouse() {
 				   && distTop >= 3 * borderSize && distBottom >= 3 * borderSize) {
 					mouseInBorder = false;
 				} else if(!mouseInBorder) {
-					mouseInBorderTime = arxtime.now_ul();
+					mouseInBorderTime = arxtime.now();
 					mouseInBorder = true;
 				}
 				
-				if(borderDelay > 0 && arxtime.now_ul() - mouseInBorderTime < borderDelay) {
+				if(borderDelay > 0 && arxtime.now() - mouseInBorderTime < borderDelay) {
 					mouseDiff = Vec2f_ZERO;
 				} else {
 					bKeySpecialMove = true;
@@ -1890,7 +1891,7 @@ void ArxGame::manageKeyMouse() {
 				}
 
 				if(glm::abs(rotation.y) > 2.f)
-					entities.player()->animBlend.lastanimtime = 0;
+					entities.player()->animBlend.lastanimtime = ArxInstant_ZERO;
 
 				if(rotation.x != 0.f)
 					player.m_currentMovement |= PLAYER_ROTATE;
@@ -2154,7 +2155,7 @@ void ArxGame::manageEditorControls() {
 						Vec3f viewvector = angleToVector(player.angle + Anglef(0.f, ratio.x * 30.f, 0.f));
 						viewvector.y += ratio.y;
 						
-						io->soundtime=0;
+						io->soundtime = ArxInstant_ZERO;
 						io->soundcount=0;
 						
 						EERIE_PHYSICS_BOX_Launch(io->obj, io->pos, io->angle, viewvector);

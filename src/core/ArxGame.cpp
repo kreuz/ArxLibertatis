@@ -105,6 +105,7 @@ ZeniMax Media Inc., Suite 120, Rockville, Maryland 20850 USA.
 #include "graphics/particle/ParticleEffects.h"
 #include "graphics/particle/ParticleManager.h"
 #include "graphics/particle/MagicFlare.h"
+#include "graphics/particle/Spark.h"
 #include "graphics/texture/TextureStage.h"
 
 #include "gui/Cursor.h"
@@ -179,7 +180,6 @@ extern Cinematic* ControlCinematique;
 extern EERIE_3DOBJ * arrowobj;
 
 extern Entity * FlyingOverIO;
-extern Vec3f LastValidPlayerPos;
 extern Color ulBKGColor;
 extern EERIE_CAMERA conversationcamera;
 extern ParticleManager * pParticleManager;
@@ -655,7 +655,7 @@ ARX_PROGRAM_OPTION("skiplogo", "", "Skip logos at startup", &skipLogo);
 static bool HandleGameFlowTransitions() {
 	
 	const int TRANSITION_DURATION = 3600;
-	static ArxInstant TRANSITION_START = 0;
+	static ArxInstant TRANSITION_START = ArxInstant_ZERO;
 
 	if(GameFlow::getTransition() == GameFlow::NoTransition) {
 		return false;
@@ -677,7 +677,7 @@ static bool HandleGameFlowTransitions() {
 			}
 			
 			arxtime.update();
-			TRANSITION_START = arxtime.now_ul();
+			TRANSITION_START = arxtime.now();
 		}
 
 		ARX_INTERFACE_ShowFISHTANK();
@@ -686,7 +686,7 @@ static bool HandleGameFlowTransitions() {
 		float elapsed = arxtime.now_f() - TRANSITION_START;
 
 		if(elapsed > TRANSITION_DURATION) {
-			TRANSITION_START = 0;
+			TRANSITION_START = ArxInstant_ZERO;
 			GameFlow::setTransition(GameFlow::SecondLogo);
 		}
 
@@ -703,7 +703,7 @@ static bool HandleGameFlowTransitions() {
 			}
 			
 			arxtime.update();
-			TRANSITION_START = arxtime.now_ul();
+			TRANSITION_START = arxtime.now();
 			ARX_SOUND_PlayInterface(SND_PLAYER_HEART_BEAT);
 		}
 
@@ -713,7 +713,7 @@ static bool HandleGameFlowTransitions() {
 		float elapsed = arxtime.now_f() - TRANSITION_START;
 
 		if(elapsed > TRANSITION_DURATION) {
-			TRANSITION_START = 0;
+			TRANSITION_START = ArxInstant_ZERO;
 			GameFlow::setTransition(GameFlow::LoadingScreen);
 		}
 
@@ -854,6 +854,7 @@ bool ArxGame::initGame()
 
 	ARX_SPELLS_ClearAllSymbolDraw();
 	ARX_PARTICLES_ClearAll();
+	ParticleSparkClear();
 	ARX_MAGICAL_FLARES_FirstInit();
 	
 	LastLoadedScene.clear();
@@ -1933,7 +1934,7 @@ void ArxGame::updateLevel() {
 		
 		SpellBase * spell = spells.getSpellByCaster(PlayerEntityHandle, SPELL_MAGIC_SIGHT);
 		if(spell) {
-			ArxDuration duration = arxtime.now_ul() - spell->m_timcreation;
+			ArxDuration duration = arxtime.now() - spell->m_timcreation;
 			magicSightZoom = glm::clamp(float(duration) / 500.f, 0.f, 1.f);
 		}
 		
@@ -1990,6 +1991,7 @@ void ArxGame::renderLevel() {
 	pParticleManager->Render();
 	
 	ARX_PARTICLES_Update(&subj);
+	ParticleSparkUpdate();
 	
 	GRenderer->SetFogColor(ulBKGColor);
 	GRenderer->SetRenderState(Renderer::DepthTest, true);
@@ -2079,7 +2081,7 @@ void ArxGame::renderLevel() {
 		GRenderer->GetTextureStage(0)->setWrapMode(TextureStage::WrapRepeat);
 	
 		GRenderer->SetRenderState(Renderer::AlphaBlending, false);
-		PopAllTriangleList();
+		PopAllTriangleListOpaque();
 		GRenderer->SetRenderState(Renderer::AlphaBlending, true);
 		PopAllTriangleListTransparency();
 		GRenderer->SetRenderState(Renderer::AlphaBlending, false);
@@ -2119,7 +2121,7 @@ void ArxGame::renderLevel() {
 		ARX_INTERFACE_RenderCursor();
 
 		GRenderer->SetRenderState(Renderer::AlphaBlending, false);
-		PopAllTriangleList();
+		PopAllTriangleListOpaque();
 		GRenderer->SetRenderState(Renderer::AlphaBlending, true);
 		PopAllTriangleListTransparency();
 		GRenderer->SetRenderState(Renderer::AlphaBlending, false);

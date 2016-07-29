@@ -75,7 +75,9 @@ ZeniMax Media Inc., Suite 120, Rockville, Maryland 20850 USA.
 #include "graphics/data/Mesh.h"
 #include "graphics/data/MeshManipulation.h"
 #include "graphics/data/TextureContainer.h"
+#include "graphics/effects/PolyBoom.h"
 #include "graphics/particle/ParticleEffects.h"
+#include "graphics/particle/Spark.h"
 
 #include "io/resource/ResourcePath.h"
 
@@ -752,7 +754,7 @@ bool ARX_EQUIPMENT_Strike_Check(Entity * io_source, Entity * io_weapon, float ra
 							}
 
 							if(paralyse > 0.f) {
-								long ptime = long(std::min(dmgs * 1000.f, paralyse));
+								ArxDuration ptime = ArxDurationMs(std::min(dmgs * 1000.f, paralyse));
 								ARX_SPELLS_Launch(SPELL_PARALYSE,
 								                  weapon,
 								                  SPELLCAST_FLAG_NOMANA | SPELLCAST_FLAG_NOCHECKCANCAST,
@@ -772,18 +774,20 @@ bool ARX_EQUIPMENT_Strike_Check(Entity * io_source, Entity * io_weapon, float ra
 
 							if(!(flags & 1)) {
 								ARX_PARTICLES_Spawn_Splat(pos, dmgs, color);
-
+								
+								Vec3f vertPos = target->obj->vertexlist3[hitpoint].v;
+								
 								Sphere sp;
 								float power;
 								power = (dmgs * ( 1.0f / 40 )) + 0.7f;
 								Vec3f vect;
-								vect.x = target->obj->vertexlist3[hitpoint].v.x - io_source->pos.x;
+								vect.x = vertPos.x - io_source->pos.x;
 								vect.y = 0;
-								vect.z = target->obj->vertexlist3[hitpoint].v.z - io_source->pos.z;
+								vect.z = vertPos.z - io_source->pos.z;
 								vect = glm::normalize(vect);
-								sp.origin.x = target->obj->vertexlist3[hitpoint].v.x + vect.x * 30.f;
-								sp.origin.y = target->obj->vertexlist3[hitpoint].v.y;
-								sp.origin.z = target->obj->vertexlist3[hitpoint].v.z + vect.z * 30.f;
+								sp.origin.x = vertPos.x + vect.x * 30.f;
+								sp.origin.y = vertPos.y;
+								sp.origin.z = vertPos.z + vect.z * 30.f;
 								sp.radius = 3.5f * power * 20;
 
 								if(CheckAnythingInSphere(sp, PlayerEntityHandle, CAS_NO_NPC_COL)) {
@@ -792,16 +796,16 @@ bool ARX_EQUIPMENT_Strike_Check(Entity * io_source, Entity * io_weapon, float ra
 									Sphere splatSphere;
 									splatSphere.origin = sp.origin;
 									splatSphere.radius = 30.f;
-									SpawnGroundSplat(splatSphere, rgb, 1);
+									PolyBoomAddSplat(splatSphere, rgb, 1);
 								}
 							}
 
 							ARX_PARTICLES_Spawn_Blood2(pos, dmgs, color, target);
 						} else {
 							if(target->ioflags & IO_ITEM)
-								ARX_PARTICLES_Spawn_Spark(pos, Random::getu(0, 3), SpawnSparkType_Default);
+								ParticleSparkSpawn(pos, Random::getu(0, 3), SpawnSparkType_Default);
 							else
-								ARX_PARTICLES_Spawn_Spark(pos, Random::getu(0, 30), SpawnSparkType_Default);
+								ParticleSparkSpawn(pos, Random::getu(0, 30), SpawnSparkType_Default);
 
 							ARX_NPC_SpawnAudibleSound(pos, io_source);
 
@@ -819,7 +823,7 @@ bool ARX_EQUIPMENT_Strike_Check(Entity * io_source, Entity * io_weapon, float ra
 						if(target->ioflags & IO_ITEM)
 							nb = 1;
 
-						ARX_PARTICLES_Spawn_Spark(pos, nb, SpawnSparkType_Default);
+						ParticleSparkSpawn(pos, nb, SpawnSparkType_Default);
 						ARX_NPC_SpawnAudibleSound(pos, io_source);
 						target->spark_n_blood = SP_SPARKING;
 
@@ -836,7 +840,7 @@ bool ARX_EQUIPMENT_Strike_Check(Entity * io_source, Entity * io_weapon, float ra
 						if(target->ioflags & IO_ITEM)
 							nb = 1;
 
-						ARX_PARTICLES_Spawn_Spark(pos, nb, SpawnSparkType_Default);
+						ParticleSparkSpawn(pos, nb, SpawnSparkType_Default);
 						ARX_NPC_SpawnAudibleSound(pos, io_source);
 						target->spark_n_blood = SP_SPARKING;
 
@@ -888,7 +892,7 @@ bool ARX_EQUIPMENT_Strike_Check(Entity * io_source, Entity * io_weapon, float ra
 				}
 			}
 
-			ARX_PARTICLES_Spawn_Spark(sphere.origin, Random::getu(0, 10), SpawnSparkType_Default);
+			ParticleSparkSpawn(sphere.origin, Random::getu(0, 10), SpawnSparkType_Default);
 			ARX_NPC_SpawnAudibleSound(sphere.origin, io_source);
 		}
 	}

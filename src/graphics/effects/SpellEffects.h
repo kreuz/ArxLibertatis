@@ -67,16 +67,15 @@ public:
 	// We can't use ARX_ALIGNOF(glm::mat4x4) directly because MSVC sucks
 	ARX_STATIC_ASSERT(ARX_ALIGNOF(glm::mat4x4) <= 16, "need to increase alignment");
 	
-		unsigned long ulDuration;
-		unsigned long ulCurrentTime;
+		ArxDuration m_duration;
+		ArxDuration m_elapsed;
 
 		CSpellFx();
 		virtual ~CSpellFx() { }
 		
-		virtual void SetDuration(const unsigned long ulaDuration);
-		virtual unsigned long GetDuration();
+		virtual void SetDuration(ArxDuration ulaDuration);
 		
-		virtual void Update(float timeDelta) = 0;
+		virtual void Update(ArxDuration timeDelta) = 0;
 		virtual void Render() = 0;
 	
 	ARX_USE_ALIGNED_NEW(CSpellFx)

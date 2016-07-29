@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 Arx Libertatis Team (see the AUTHORS file)
+ * Copyright 2016 Arx Libertatis Team (see the AUTHORS file)
  *
  * This file is part of Arx Libertatis.
  *
@@ -17,28 +17,22 @@
  * along with Arx Libertatis.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef ARX_GAME_MAGIC_PRECAST_H
-#define ARX_GAME_MAGIC_PRECAST_H
+#ifndef ARX_GRAPHICS_PARTICLE_SPARK_H
+#define ARX_GRAPHICS_PARTICLE_SPARK_H
 
-#include <string>
+#include "math/Types.h"
 
-#include "game/magic/Spell.h"
-
-
-struct PRECAST_STRUCT {
-	SpellType typ;
-	long level;
-	ArxInstant launch_time;
-	SpellcastFlags flags;
-	ArxDuration duration;
+enum SpawnSparkType {
+	SpawnSparkType_Default = 0,
+	SpawnSparkType_Failed = 1,
+	SpawnSparkType_Success = 2
 };
 
-extern std::vector<PRECAST_STRUCT> Precast;
+void ParticleSparkClear();
+long ParticleSparkCount();
 
-void ARX_SPELLS_Precast_Reset();
+void ParticleSparkSpawn(const Vec3f & pos, unsigned int count, SpawnSparkType type);
 
-void ARX_SPELLS_Precast_Add(SpellType typ, long _level, SpellcastFlags flags, ArxDuration duration);
-void ARX_SPELLS_Precast_Launch(PrecastHandle num);
-void ARX_SPELLS_Precast_Check();
+void ParticleSparkUpdate();
 
-#endif // ARX_GAME_MAGIC_PRECAST_H
+#endif // ARX_GRAPHICS_PARTICLE_SPARK_H

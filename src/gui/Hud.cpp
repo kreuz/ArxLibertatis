@@ -147,7 +147,7 @@ void HitStrengthGauge::update() {
 		if(player.m_bowAimRatio > 0) {
 			j = player.m_bowAimRatio;
 		} else {
-			const ArxDuration delta = arxtime.now_ul() - player.m_aimTime;
+			const ArxDuration delta = arxtime.now() - player.m_aimTime;
 			
 			//TODO global
 			bIsAiming = delta > 0;
@@ -287,7 +287,7 @@ void BackpackIconGui::update(const Rectf & parent) {
 
 void BackpackIconGui::updateInput() {
 	
-	static ArxInstant flDelay = 0;
+	static ArxInstant flDelay = ArxInstant_ZERO;
 	
 	// Check for backpack Icon
 	if(m_rect.contains(Vec2f(DANAEMouse))) {
@@ -307,18 +307,18 @@ void BackpackIconGui::updateInput() {
 			
 			playerInventory.optimize();
 			
-			flDelay = 0;
+			flDelay = ArxInstant_ZERO;
 		} else if(eeMouseDown1() || flDelay) {
 			if(!flDelay) {
 				arxtime.update();
-				flDelay = arxtime.now_ul();
+				flDelay = arxtime.now();
 				return;
 			} else {
 				arxtime.update();
-				if(arxtime.now_ul() - flDelay < 300) {
+				if(arxtime.now() - flDelay < 300) {
 					return;
 				} else {
-					flDelay = 0;
+					flDelay = ArxInstant_ZERO;
 				}
 			}
 			
@@ -774,7 +774,7 @@ void MemorizedRunesHud::draw() {
 			pos.x += 32 * m_scale;
 		}
 	}
-	if(arxtime.now_f() - player.SpellToMemorize.lTimeCreation > 30000) {
+	if(arxtime.now() - player.SpellToMemorize.lTimeCreation > ArxDurationMs(30000)) {
 		player.SpellToMemorize.bSpell = false;
 	}
 }
@@ -1034,8 +1034,8 @@ void PrecastSpellsGui::update() {
 		
 		float val = intensity;
 		
-		if(precastSlot.launch_time > 0 && (arxtime.now_f() >= precastSlot.launch_time)) {
-			float tt = (arxtime.now_f() - precastSlot.launch_time) * (1.0f/1000);
+		if(precastSlot.launch_time > ArxInstant_ZERO && arxtime.now() >= precastSlot.launch_time) {
+			float tt = (arxtime.now() - precastSlot.launch_time) * (1.0f/1000);
 			
 			if(tt > 1.f)
 				tt = 1.f;
@@ -1194,7 +1194,7 @@ void ActiveSpellsGui::ManageSpellIcon(SpellBase & spell, float intensity, bool f
 	bool flicker = true;
 	
 	if(spell.m_hasDuration) {
-		if(player.manaPool.current < 20 || spell.m_timcreation + spell.m_duration - arxtime.now_f() < 2000) {
+		if(player.manaPool.current < 20 || spell.m_timcreation + spell.m_duration - arxtime.now() < ArxDurationMs(2000)) {
 			if(ucFlick&1)
 				flicker = false;
 		}

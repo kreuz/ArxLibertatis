@@ -39,7 +39,8 @@
 #include "graphics/Renderer.h"
 #include "graphics/data/TextureContainer.h"
 #include "graphics/particle/ParticleEffects.h"
-#include "graphics/effects/DrawEffects.h"
+#include "graphics/particle/Spark.h"
+#include "graphics/effects/PolyBoom.h"
 #include "graphics/effects/Trail.h"
 
 #include "physics/Collisions.h"
@@ -90,7 +91,7 @@ void ARX_THROWN_OBJECT_KillAll() {
 
 static long ARX_THROWN_OBJECT_GetFree() {
 	
-	ArxInstant latest_time = arxtime.now_ul();
+	ArxInstant latest_time = arxtime.now();
 	long latest_obj = -1;
 
 	for(size_t i = 0; i < MAX_THROWN_OBJECTS; i++) {
@@ -139,7 +140,7 @@ void ARX_THROWN_OBJECT_Throw(EntityHandle source, const Vec3f & position, const 
 	projectile.m_trail->SetNextPosition(projectile.position);
 	projectile.m_trail->Update(g_framedelay);
 	
-	projectile.creation_time = arxtime.now_ul();
+	projectile.creation_time = arxtime.now();
 	projectile.flags |= ATO_EXIST | ATO_MOVING;
 	
 	if(source == PlayerEntityHandle
@@ -319,7 +320,7 @@ static void CheckExp(const Projectile & projectile) {
 		const Vec3f & pos = projectile.position;
 		
 		spawnFireHitParticle(pos, 0);
-		ARX_BOOMS_Add(pos);
+		PolyBoomAddScorch(pos);
 		LaunchFireballBoom(pos, 10);
 		DoSphericDamage(Sphere(pos, 50.f), 4.f * 2, DAMAGE_AREA, DAMAGE_TYPE_FIRE | DAMAGE_TYPE_MAGICAL, PlayerEntityHandle);
 		ARX_SOUND_PlaySFX(SND_SPELL_FIRE_HIT, &pos);
@@ -335,7 +336,7 @@ static void CheckExp(const Projectile & projectile) {
 			light->rgb = Color3f(1.f, .8f, .6f) - randomColor3f() * Color3f(.2f, .2f, .2f);
 			light->pos = pos;
 			light->ex_flaresize = 40.f;
-			light->duration = 1500;
+			light->duration = ArxDurationMs(1500);
 		}
 	}
 }
@@ -399,7 +400,7 @@ void ARX_THROWN_OBJECT_Manage(float time_offset)
 				light->pos = projectile.position;
 				light->ex_flaresize = 40.f;
 				light->extras |= EXTRAS_FLARE;
-				light->duration = static_cast<unsigned long>(g_framedelay * 0.5f);
+				light->duration = ArxDurationMs(g_framedelay * 0.5f);
 			}
 			
 			createObjFireParticles(projectile.obj, 6, 2, 180);
@@ -455,7 +456,7 @@ void ARX_THROWN_OBJECT_Manage(float time_offset)
 				EERIEPOLY * ep = CheckArrowPolyCollision(orgn, dest);
 
 				if(ep) {
-					ARX_PARTICLES_Spawn_Spark(v0, 14, SpawnSparkType_Default);
+					ParticleSparkSpawn(v0, 14, SpawnSparkType_Default);
 					CheckExp(projectile);
 
 					if(ValidIONum(projectile.source))
@@ -478,7 +479,7 @@ void ARX_THROWN_OBJECT_Manage(float time_offset)
 					projectile.position = original_pos;
 					j = 200;
 				} else if(IsPointInField(v0)) {
-					ARX_PARTICLES_Spawn_Spark(v0, 24, SpawnSparkType_Default);
+					ParticleSparkSpawn(v0, 24, SpawnSparkType_Default);
 					CheckExp(projectile);
 
 					if (ValidIONum(projectile.source))
@@ -558,7 +559,7 @@ void ARX_THROWN_OBJECT_Manage(float time_offset)
 
 												CheckExp(projectile);
 											} else {
-												ARX_PARTICLES_Spawn_Spark(v0, 14, SpawnSparkType_Default);
+												ParticleSparkSpawn(v0, 14, SpawnSparkType_Default);
 												ARX_NPC_SpawnAudibleSound(v0, entities[projectile.source]);
 											}
 										}
@@ -569,7 +570,7 @@ void ARX_THROWN_OBJECT_Manage(float time_offset)
 												ARX_DAMAGES_DamageFIX(target, 0.1f, projectile.source, false);
 										}
 
-										ARX_PARTICLES_Spawn_Spark(v0, 14, SpawnSparkType_Default);
+										ParticleSparkSpawn(v0, 14, SpawnSparkType_Default);
 
 										if(ValidIONum(projectile.source))
 											ARX_NPC_SpawnAudibleSound(v0, entities[projectile.source]);

@@ -290,18 +290,18 @@ struct SavedPrecast {
 		PRECAST_STRUCT a;
 		a.typ = (typ < 0) ? SPELL_NONE : (SpellType)typ; // TODO save/load enum
 		a.level = level;
-		a.launch_time = launch_time;
+		a.launch_time = ArxInstantMs(launch_time); // TODO save/load time
 		a.flags = SpellcastFlags::load(flags); // TODO save/load flags
-		a.duration = duration;
+		a.duration = ArxDurationMs(duration); // TODO save/load time
 		return a;
 	}
 	
 	SavedPrecast & operator=(const PRECAST_STRUCT & b) {
 		typ = (b.typ == SPELL_NONE) ? -1 : b.typ;
 		level = b.level;
-		launch_time = b.launch_time;
+		launch_time = toMs(b.launch_time); // TODO save/load time
 		flags = b.flags;
-		duration = b.duration;
+		duration = toMs(b.duration); // TODO save/load time
 		return *this;
 	}
 	
@@ -419,10 +419,10 @@ struct ARX_CHANGELEVEL_INVENTORY_DATA_SAVE {
 struct ARX_CHANGELEVEL_TIMERS_SAVE {
 	
 	char name[SIZE_ID];
-	s32 times;
-	s32 msecs;
+	s32 count;
+	s32 interval;
 	s32 pos;
-	s32 tim;
+	s32 remaining;
 	s32 script; // 0 = global ** 1 = local
 	s32 longinfo;
 	s32 flags;
@@ -530,7 +530,7 @@ struct SavedSpellcastData {
 		a.spell_flags = SpellcastFlags::load(spell_flags); // TODO save/load flags
 		a.spell_level = spell_level;
 		a.target = EntityHandle(target); // TODO saved internum not valid after loading
-		a.duration = duration;
+		a.duration = ArxDurationMs(duration); // TODO save/load time
 		return a;
 	}
 	
@@ -541,7 +541,7 @@ struct SavedSpellcastData {
 		spell_flags = b.spell_flags;
 		spell_level = b.spell_level;
 		target = b.target.handleData();
-		duration = b.duration;
+		duration = toMs(b.duration); // TODO save/load time
 		return *this;
 	}
 	

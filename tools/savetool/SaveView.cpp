@@ -973,7 +973,7 @@ static int view_player(SaveBlock & save, const char * dat, size_t size) {
 		cout << endl << "Precast #" << i << ':' << endl;
 		
 		cout << "  Spell: "; print_spell(p.typ); cout << endl;
-		cout << "  Level: " << p.launch_time << endl;
+		cout << "  Level: " << p.level << endl;
 		cout << "  Launch time: " << p.launch_time << endl;
 		cout << "  Duration: " << p.duration << endl;
 		cout << "  Flags:"; print_spellcast_flags(p.flags); cout << endl;
@@ -1408,11 +1408,15 @@ static int view_io(SaveBlock & save, const char * dat, size_t size) {
 		}
 		
 		cout << "  Script: " << (ats->script ? "overriding" : "base") << endl;
-		cout << "  Milliseconds: " << ats->msecs << endl;
+		cout << "  Interval: " << ats->interval << "ms" << endl;
 		cout << "  Name: " << boost::to_lower_copy(util::loadString(ats->name)) << endl;
 		cout << "  Position: " << ats->pos << endl;
-		cout << "  Time: " << ats->tim << endl;
-		if(ats->times) cout << "  Count: " << ats->times << endl;
+		cout << "  Remaining: " << ats->remaining << "ms" << endl;
+		if(ats->count == 0) {
+			cout << "  Count: ∞" << endl;
+		} else {
+			cout << "  Count: " << ats->count << endl;
+		}
 	}
 	
 	for(size_t i = 0; i < 2; i++) {

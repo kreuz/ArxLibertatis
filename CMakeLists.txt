@@ -237,6 +237,7 @@ mark_as_advanced(
 # Helper scrips
 
 include(CheckCXXSourceCompiles)
+include(CheckIncludeFiles)
 include(CheckSymbolExists)
 include(CheckTypeSize)
 
@@ -539,7 +540,7 @@ else(MSVC)
 	# Define _POSIX_C_SOURCE and _XOPEN_SOURCE for GNU systems
 	if(CMAKE_SYSTEM_NAME MATCHES "Linux" OR CMAKE_SYSTEM_NAME MATCHES "GNU"
 	   OR CMAKE_SYSTEM_NAME MATCHES "kFreeBSD")
-		set(CMAKE_REQUIRED_DEFINITIONS "-D_POSIX_C_SOURCE=200809L -D_XOPEN_SOURCE=600")
+		set(CMAKE_REQUIRED_DEFINITIONS "-D_ISOC11_SOURCE -D_POSIX_C_SOURCE=200809L -D_XOPEN_SOURCE=600")
 		add_definitions(-D_POSIX_C_SOURCE=200809L -D_XOPEN_SOURCE=600)
 		if(CMAKE_SYSTEM_NAME MATCHES "kFreeBSD")
 			set(CMAKE_REQUIRED_DEFINITIONS "${CMAKE_REQUIRED_DEFINITIONS} -D_BSD_SOURCE")
@@ -796,7 +797,6 @@ set(GRAPHICS_SOURCES
 	src/graphics/data/Progressive.cpp
 	src/graphics/data/TextureContainer.cpp
 	src/graphics/effects/BlobShadow.cpp
-	src/graphics/effects/DrawEffects.cpp
 	src/graphics/effects/Fade.cpp
 	src/graphics/effects/Field.cpp
 	src/graphics/effects/Fissure.cpp
@@ -806,6 +806,7 @@ set(GRAPHICS_SOURCES
 	src/graphics/effects/Halo.cpp
 	src/graphics/effects/Lightning.cpp
 	src/graphics/effects/MagicMissile.cpp
+	src/graphics/effects/PolyBoom.cpp
 	src/graphics/effects/RotatingCone.cpp
 	src/graphics/effects/Trail.cpp
 	src/graphics/font/Font.cpp
@@ -819,6 +820,7 @@ set(GRAPHICS_SOURCES
 	src/graphics/particle/ParticleManager.cpp
 	src/graphics/particle/ParticleSystem.cpp
 	src/graphics/particle/MagicFlare.cpp
+	src/graphics/particle/Spark.cpp
 	src/graphics/spells/Spells05.cpp
 	src/graphics/texture/PackedTexture.cpp
 	src/graphics/texture/Texture.cpp

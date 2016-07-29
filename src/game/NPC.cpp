@@ -758,7 +758,7 @@ bool ARX_NPC_SetStat(Entity& io, const std::string & statname, float value) {
 	} else if(statname == "tohit") {
 		io._npcdata->tohit = value < 0 ? 0 : value;
 	} else if(statname == "aimtime") {
-		io._npcdata->aimtime = value < 0 ? 0 : static_cast<unsigned int>(value);
+		io._npcdata->aimtime = ArxDurationMs(value < 0 ? 0 : value);
 	} else if(statname == "life") {
 		io._npcdata->lifePool.max = io._npcdata->lifePool.current = value < 0 ? 0.0000001f : value;
 	} else if(statname == "mana") {
@@ -969,7 +969,7 @@ void ARX_PHYSICS_Apply() {
 				ARX_PHYSICS_BOX_ApplyModel(pbox, g_framedelay, io->rubber, io);
 				
 				if(io->soundcount > 12) {
-					io->soundtime = 0;
+					io->soundtime = ArxInstant_ZERO;
 					io->soundcount = 0;
 					for(long k = 0; k < pbox->nb_physvert; k++) {
 						pbox->vert[k].velocity = Vec3f_ZERO;
@@ -1619,11 +1619,11 @@ static void ARX_NPC_Manage_Anims(Entity * io, float TOLERANCE) {
 				
 				io->ioflags &= ~IO_HIT;
 				changeAnimation(io, 1, cycle, EA_LOOP);
-				io->_npcdata->aiming_start = arxtime.now_ul();
+				io->_npcdata->aiming_start = arxtime.now();
 				
 			} else if(isCurrentAnimation(io, 1, cycle)) {
 				
-				ArxDuration elapsed = arxtime.now_ul() - io->_npcdata->aiming_start;
+				ArxDuration elapsed = arxtime.now() - io->_npcdata->aiming_start;
 				ArxDuration aimtime = io->_npcdata->aimtime;
 				if((elapsed > aimtime || (elapsed > aimtime * 0.5f && Random::getf() > 0.9f))
 				    && tdist < square(STRIKE_DISTANCE)) {
@@ -1720,11 +1720,11 @@ static void ARX_NPC_Manage_Anims(Entity * io, float TOLERANCE) {
 				if(isCurrentAnimation(io, 1, start) && (layer1.flags & EA_ANIMEND)) {
 					
 					changeAnimation(io, 1, cycle, EA_LOOP);
-					io->_npcdata->aiming_start = arxtime.now_ul();
+					io->_npcdata->aiming_start = arxtime.now();
 					
 				} else if(isCurrentAnimation(io, 1, cycle)) {
 					
-					ArxDuration elapsed = arxtime.now_ul() - io->_npcdata->aiming_start;
+					ArxDuration elapsed = arxtime.now() - io->_npcdata->aiming_start;
 					ArxDuration aimtime = io->_npcdata->aimtime;
 					if((elapsed > aimtime || (elapsed > aimtime * 0.5f && Random::getf() > 0.9f))
 					   && tdist < square(STRIKE_DISTANCE)) {
@@ -1941,7 +1941,7 @@ static void ManageNPCMovement(Entity * io)
 			if(!io->_npcdata->pathfind.pathwait) {
 				if(io->_npcdata->pathfind.flags & PATHFIND_NO_UPDATE) {
 					io->_npcdata->reachedtarget = 1;
-					io->_npcdata->reachedtime = arxtime.now_ul();
+					io->_npcdata->reachedtime = arxtime.now();
 
 					if(io->targetinfo != io->index())
 						SendIOScriptEvent(io, SM_REACHEDTARGET);
@@ -2481,7 +2481,7 @@ static void ManageNPCMovement(Entity * io)
 						if(!io->_npcdata->reachedtarget) {
 							EntityHandle num = io->index();
 							io->_npcdata->reachedtarget = 1;
-							io->_npcdata->reachedtime = arxtime.now_ul();
+							io->_npcdata->reachedtime = arxtime.now();
 
 							if(io->targetinfo != num) {
 								SendIOScriptEvent(io, SM_REACHEDTARGET, "fake");
@@ -2504,7 +2504,7 @@ static void ManageNPCMovement(Entity * io)
 					EVENT_SENDER = NULL;
 
 				io->_npcdata->reachedtarget = 1;
-				io->_npcdata->reachedtime = arxtime.now_ul();
+				io->_npcdata->reachedtime = arxtime.now();
 
 				if(io->animlayer[1].flags & EA_ANIMEND)
 					io->animlayer[1].cur_anim = NULL;

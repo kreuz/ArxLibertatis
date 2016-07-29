@@ -97,7 +97,7 @@ void ARX_SPEECH_Init() {
 
 static void ARX_SPEECH_MoveUp() {
 
-	if(speech[0].timecreation != 0)
+	if(speech[0].timecreation != ArxInstant_ZERO)
 		speech[0].text.clear();
 
 	for(size_t j = 0; j < MAX_SPEECH - 1; j++) {
@@ -111,7 +111,7 @@ void ARX_SPEECH_ClearAll()
 {
 	for(size_t i = 0; i < MAX_SPEECH; i++) {
 
-		if(speech[i].timecreation == 0)
+		if(speech[i].timecreation == ArxInstant_ZERO)
 			continue;
 
 		speech[i].clear();
@@ -123,23 +123,23 @@ void ARX_SPEECH_Add(const std::string & text) {
 	if(text.empty())
 		return;
 	
-	ArxInstant now = arxtime.now_ul();
-	if(now == 0) {
-		now = 1;
+	ArxInstant now = arxtime.now();
+	if(now == ArxInstant_ZERO) {
+		now = ArxInstantMs(1);
 	}
 	
-	if(speech[MAX_SPEECH - 1].timecreation != 0) {
+	if(speech[MAX_SPEECH - 1].timecreation != ArxInstant_ZERO) {
 		ARX_SPEECH_MoveUp();
 	}
 	
 	for(size_t i = 0; i < MAX_SPEECH; i++) {
 
-		if(speech[i].timecreation != 0)
+		if(speech[i].timecreation != ArxInstant_ZERO)
 			continue;
 		
 		// Sets creation time
 		speech[i].timecreation = now;
-		speech[i].duration = 2000 + text.length() * 60;
+		speech[i].duration = ArxDurationMs(2000 + text.length() * 60);
 		speech[i].text = text;
 		return;
 	}
@@ -151,7 +151,7 @@ static bool isLastSpeech(size_t index) {
 	
 	for(size_t i = index + 1; i < MAX_SPEECH; i++) {
 
-		if(speech[i].timecreation == 0)
+		if(speech[i].timecreation == ArxInstant_ZERO)
 			continue;
 
 		if(!speech[i].text.empty())
@@ -172,7 +172,7 @@ static void ARX_SPEECH_Render() {
 	
 	for(size_t i = 0; i < MAX_SPEECH; i++) {
 		
-		if(speech[i].timecreation == 0 || speech[i].text.empty()) {
+		if(speech[i].timecreation == ArxInstant_ZERO || speech[i].text.empty()) {
 			continue;
 		}
 		
@@ -205,10 +205,10 @@ void ARX_SPEECH_Check()
 	long exist = 0;
 
 	for(size_t i = 0; i < MAX_SPEECH; i++) {
-		if(speech[i].timecreation == 0)
+		if(speech[i].timecreation == ArxInstant_ZERO)
 			continue;
 		
-		float elapsed = arxtime.now_f() - speech[i].timecreation;
+		ArxDuration elapsed = arxtime.now() - speech[i].timecreation;
 		if(elapsed > speech[i].duration) {
 			ARX_SPEECH_MoveUp();
 			i--;
@@ -249,7 +249,7 @@ static void ARX_CONVERSATION_CheckAcceleratedSpeech() {
 	if(REQUEST_SPEECH_SKIP) {
 		for(size_t i = 0; i < MAX_ASPEECH; i++) {
 			if((aspeech[i].exist) && !(aspeech[i].flags & ARX_SPEECH_FLAG_UNBREAKABLE)) {
-				aspeech[i].duration = 0;
+				aspeech[i].duration = ArxDuration_ZERO;
 			}
 		}
 		REQUEST_SPEECH_SKIP = false;
@@ -344,9 +344,9 @@ long ARX_SPEECH_AddSpeech(Entity * io, const std::string & data, long mood,
 	
 	aspeech[num].exist = 1;
 	arxtime.update();
-	aspeech[num].time_creation = arxtime.now_ul();
+	aspeech[num].time_creation = arxtime.now();
 	aspeech[num].io = io; // can be NULL
-	aspeech[num].duration = 2000; // Minimum value
+	aspeech[num].duration = ArxDurationMs(2000); // Minimum value
 	aspeech[num].flags = flags;
 	aspeech[num].sample = audio::INVALID_ID;
 	aspeech[num].fDeltaY = 0.f;
@@ -391,7 +391,7 @@ long ARX_SPEECH_AddSpeech(Entity * io, const std::string & data, long mood,
 		io->lastspeechflag = 0;
 		aspeech[num].text.clear();
 		aspeech[num].text = _output;
-		aspeech[num].duration = std::max(aspeech[num].duration, ArxDuration((strlen(_output.c_str()) + 1) * 100));
+		aspeech[num].duration = std::max(aspeech[num].duration, ArxDurationMs((strlen(_output.c_str()) + 1) * 100));
 		
 		sample = data;
 	}
@@ -404,21 +404,22 @@ long ARX_SPEECH_AddSpeech(Entity * io, const std::string & data, long mood,
 	}
 
 	//Next lines must be removed (use callback instead)
-	aspeech[num].duration = (unsigned long)ARX_SOUND_GetDuration(aspeech[num].sample);
+	aspeech[num].duration = ARX_SOUND_GetDuration(aspeech[num].sample);
 
 	if ((io->ioflags & IO_NPC) && !(aspeech[num].flags & ARX_SPEECH_FLAG_OFFVOICE)) {
 		float fDiv = aspeech[num].duration /= io->_npcdata->speakpitch;
-		aspeech[num].duration = static_cast<unsigned long>(fDiv);
+		aspeech[num].duration = ArxDurationMs(fDiv);
 	}
 
-	if (aspeech[num].duration < 500) aspeech[num].duration = 2000;
+	if (aspeech[num].duration < ArxDurationMs(500))
+		aspeech[num].duration = ArxDurationMs(2000);
 	
 	return num;
 }
 
 void ARX_SPEECH_Update() {
 	
-	ArxInstant now = arxtime.now_ul();
+	ArxInstant now = arxtime.now();
 
 	if(cinematicBorder.isActive() || BLOCK_PLAYER_CONTROLS)
 		ARX_CONVERSATION_CheckAcceleratedSpeech();
@@ -528,9 +529,9 @@ void ARX_SPEECH_Update() {
 			float fDTime;
 
 			if(speech->sample) {
-				float duration = ARX_SOUND_GetDuration(speech->sample);
-				if(duration == 0.0f) {
-					duration = 4000.0f;
+				ArxDuration duration = ARX_SOUND_GetDuration(speech->sample);
+				if(duration == ArxDuration_ZERO) {
+					duration = ArxDurationMs(4000);
 				}
 
 				fDTime = (height * g_framedelay) / duration; //speech->duration;

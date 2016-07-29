@@ -44,7 +44,7 @@ ZeniMax Media Inc., Suite 120, Rockville, Maryland 20850 USA.
 //
 // Copyright (c) 1999-2001 ARKANE Studios SA. All rights reserved
 
-#include "graphics/effects/DrawEffects.h"
+#include "graphics/effects/PolyBoom.h"
 
 #include "animation/AnimationRender.h"
 
@@ -88,15 +88,15 @@ static const float BOOM_RADIUS = 420.f;
 extern TextureContainer * Boom;
 extern Color ulBKGColor;
 
-size_t PolyBoom_count() {
+size_t PolyBoomCount() {
 	return polyboom.size();
 }
 
-void ARX_BOOMS_ClearAllPolyBooms() {
+void PolyBoomClear() {
 	polyboom.clear();
 }
 
-void ARX_BOOMS_Add(const Vec3f & poss) {
+void PolyBoomAddScorch(const Vec3f & poss) {
 	
 	static TextureContainer * tc2 = TextureContainer::Load("graph/particles/boom");
 	
@@ -147,8 +147,8 @@ void ARX_BOOMS_Add(const Vec3f & poss) {
 			pb.type = 0;
 			pb.ep = ep;
 			pb.tc = tc2;
-			pb.tolive = 10000;
-			pb.timecreation = arxtime.now_ul();
+			pb.tolive = ArxDurationMs(10000);
+			pb.timecreation = arxtime.now();
 			pb.rgb = Color3f::black;
 			for(int k = 0; k < nbvert; k++) {
 				pb.v[k] = pb.u[k] = temp_uv1[k];
@@ -163,7 +163,7 @@ void ARX_BOOMS_Add(const Vec3f & poss) {
 extern TextureContainer * bloodsplat[6];
 extern TextureContainer * water_splat[3];
 
-void SpawnGroundSplat(const Sphere & sp, const Color3f & col, long flags) {
+void PolyBoomAddSplat(const Sphere & sp, const Color3f & col, long flags) {
 	
 	Vec3f poss = sp.origin;
 	float size = sp.radius;
@@ -253,7 +253,7 @@ void SpawnGroundSplat(const Sphere & sp, const Color3f & col, long flags) {
 	float hdiv,vdiv;
 	hdiv=vdiv=1.f/(size*2);
 	
-	ArxInstant now = arxtime.now_ul();
+	ArxInstant now = arxtime.now();
 	
 	std::vector<POLYBOOM>::iterator pb = polyboom.begin();
 	while(pb != polyboom.end()) {
@@ -320,14 +320,14 @@ void SpawnGroundSplat(const Sphere & sp, const Color3f & col, long flags) {
 						long num = Random::get(0, 2);
 						pb.tc = water_splat[num];
 						
-						pb.tolive=1500;
+						pb.tolive = ArxDurationMs(1500);
 					} else {
 						pb.type = 1;
 						
 						long num = Random::get(0, 5);
 						pb.tc = bloodsplat[num];
 						
-						pb.tolive = ArxDuration(16000 * size * (1.0f/40));
+						pb.tolive = ArxDurationMs(16000 * size * (1.0f/40));
 					}
 					
 					pb.ep=ep;
@@ -362,48 +362,33 @@ void SpawnGroundSplat(const Sphere & sp, const Color3f & col, long flags) {
 }
 
 
-
-
-// This used to add a bias when the "forceZbias" config option was activated, but it
-// was off by default and we removed it.
-static void IncrementPolyWithNormalOutput(EERIEPOLY * _pPoly, TexturedVertexUntransformed * _pOut) {
-	
-	_pOut[0].p = _pPoly->v[0].p;
-	_pOut[1].p = _pPoly->v[1].p;
-	_pOut[2].p = _pPoly->v[2].p;
-	
-	if(_pPoly->type&POLY_QUAD) {
-		_pOut[3].p = _pPoly->v[3].p;
-	}
-}
-
-void ARXDRAW_DrawPolyBoom() {
+void PolyBoomDraw() {
 	
 	ARX_PROFILE_FUNC();
 	
 	GRenderer->SetFogColor(Color::none); // TODO: not handled by RenderMaterial
-	ArxInstant now = arxtime.now_ul();
+	ArxInstant now = arxtime.now();
 	
 	for(size_t i = 0; i < polyboom.size(); i++) {
 		
 		POLYBOOM & pb = polyboom[i];
 		
-		// TODO what exactly does pb.type do ?
+		// FIXME what exactly does pb.type do ?
 		if(pb.type & 128) {
 			if(pb.timecreation - g_framedelay > 0) {
 				float fCalc = pb.timecreation - g_framedelay;
-				pb.timecreation = checked_range_cast<unsigned long>(fCalc);
+				pb.timecreation = ArxInstant(fCalc);
 			}
 			
 			if(pb.timecreation - g_framedelay > 0) {
 				float fCalc =  pb.timecreation - g_framedelay;
-				pb.timecreation = checked_range_cast<unsigned long>(fCalc);
+				pb.timecreation = ArxInstant(fCalc);
 			}
 		}
 		
 		ArxDuration t = pb.timecreation + pb.tolive - now;
 		
-		if(t <= 0) {
+		if(t <= ArxDuration_ZERO) {
 			std::swap(polyboom[i], polyboom.back());
 			polyboom.pop_back();
 			i--;
@@ -434,10 +419,9 @@ void ARXDRAW_DrawPolyBoom() {
 				ColorRGBA col = (player.m_improve ? (Color3f::red * (tt*.5f)) : Color3f::gray(tt)).toRGB();
 				
 				TexturedVertexUntransformed ltv[4];
-				IncrementPolyWithNormalOutput(pb.ep,ltv);
 				
 				for(long k = 0; k < pb.nbvert; k++) {
-					ltv[k].p = ltv[k].p;
+					ltv[k].p = pb.ep->v[k].p;
 					ltv[k].uv.x=pb.u[k];
 					ltv[k].uv.y=pb.v[k];
 					ltv[k].color = col;
@@ -466,10 +450,9 @@ void ARXDRAW_DrawPolyBoom() {
 				ColorRGBA col = Color4f(pb.rgb * tt, glm::clamp(tt * 1.5f, 0.f, 1.f)).toRGBA();
 				
 				TexturedVertexUntransformed ltv[4];
-				IncrementPolyWithNormalOutput(pb.ep, ltv);
 				
 				for(long k = 0; k < pb.nbvert; k++) {
-					ltv[k].p = ltv[k].p;
+					ltv[k].p = pb.ep->v[k].p;
 					ltv[k].uv.x=(pb.u[k]-0.5f)*(tr)+0.5f;
 					ltv[k].uv.y=(pb.v[k]-0.5f)*(tr)+0.5f;
 					ltv[k].color = col;
@@ -495,10 +478,9 @@ void ARXDRAW_DrawPolyBoom() {
 				ColorRGBA col = (pb.rgb * ttt).toRGB();
 				
 				TexturedVertexUntransformed ltv[4];
-				IncrementPolyWithNormalOutput(pb.ep,ltv);
 				
 				for(long k = 0; k < pb.nbvert; k++) {
-					ltv[k].p = ltv[k].p;
+					ltv[k].p = pb.ep->v[k].p;
 					ltv[k].uv.x=(pb.u[k]-0.5f)*(tr)+0.5f;
 					ltv[k].uv.y=(pb.v[k]-0.5f)*(tr)+0.5f;
 					ltv[k].color=col;

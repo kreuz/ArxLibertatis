@@ -386,7 +386,7 @@ ValueType getSystemVar(const EERIE_SCRIPT * es, Entity * entity, const std::stri
 				if(!entity || entity->script.timers[0] == 0) {
 					*lcontent = 0;
 				} else {
-					*lcontent = long(arxtime.now_ul() - es->timers[0]);
+					*lcontent = long(arxtime.now() - es->timers[0]);
 				}
 				return TYPE_LONG;
 			}
@@ -395,7 +395,7 @@ ValueType getSystemVar(const EERIE_SCRIPT * es, Entity * entity, const std::stri
 				if(!entity || entity->script.timers[1] == 0) {
 					*lcontent = 0;
 				} else {
-					*lcontent = long(arxtime.now_ul() - es->timers[1]);
+					*lcontent = long(arxtime.now() - es->timers[1]);
 				}
 				return TYPE_LONG;
 			}
@@ -404,7 +404,7 @@ ValueType getSystemVar(const EERIE_SCRIPT * es, Entity * entity, const std::stri
 				if(!entity || entity->script.timers[2] == 0) {
 					*lcontent = 0;
 				} else {
-					*lcontent = long(arxtime.now_ul() - es->timers[2]);
+					*lcontent = long(arxtime.now() - es->timers[2]);
 				}
 				return TYPE_LONG;
 			}
@@ -413,7 +413,7 @@ ValueType getSystemVar(const EERIE_SCRIPT * es, Entity * entity, const std::stri
 				if(!entity || entity->script.timers[3] == 0) {
 					*lcontent = 0;
 				} else {
-					*lcontent = long(arxtime.now_ul() - es->timers[3]);
+					*lcontent = long(arxtime.now() - es->timers[3]);
 				}
 				return TYPE_LONG;
 			}
@@ -1808,12 +1808,12 @@ static bool Manage_Specific_RAT_Timer(SCR_TIMER * st) {
 		}
 		
 		io->gameFlags &= ~GFLAG_INVISIBILITY;
-		st->times = 1;
+		st->count = 1;
 	} else {
-		st->times++;
-		st->msecs = static_cast<long>(st->msecs * ( 1.0f / 2 ));
-		if(st->msecs < 100)
-			st->msecs = 100;
+		st->count++;
+		st->interval = ArxDuration(st->interval * ( 1.0f / 2 ));
+		if(st->interval < ArxDurationMs(100))
+			st->interval = ArxDurationMs(100);
 		
 		return true;
 	}
@@ -1836,8 +1836,9 @@ void ARX_SCRIPT_Timer_Check() {
 			continue;
 		}
 		
-		ArxInstant now = arxtime.now_ul();
-		ArxInstant fire_time = st->tim + st->msecs;
+		ArxInstant now = arxtime.now();
+		ArxInstant fire_time = st->start + st->interval;
+		arx_assert(st->start <= now);
 		if(fire_time > now) {
 			// Timer not ready to fire yet
 			continue;
@@ -1845,10 +1846,12 @@ void ARX_SCRIPT_Timer_Check() {
 		
 		// Skip heartbeat timer events for far away objects
 		if((st->flags & 1) && !(st->io->gameFlags & GFLAG_ISINTREATZONE)) {
-			long increment = (now - st->tim) / st->msecs;
-			st->tim += st->msecs * increment;
-			arx_assert(st->tim <= now && st->tim + st->msecs > now,
-			           "start=%lu wait=%ld now=%lu", st->tim, st->msecs, now);
+			long increment = (now - st->start) / st->interval;
+			st->start += st->interval * increment;
+			// TODO print full 64-bit time
+			arx_assert(st->start <= now && st->start + st->interval > now,
+			           "start=%ld wait=%ld now=%ld",
+			           long(toMs(st->start)), long(toMs(st->interval)), long(toMs(now)));
 			continue;
 		}
 		
@@ -1866,13 +1869,13 @@ void ARX_SCRIPT_Timer_Check() {
 		std::string name = st->name;
 		#endif
 		
-		if(st->times == 1) {
+		if(st->count == 1) {
 			ARX_SCRIPT_Timer_ClearByNum(i);
 		} else {
-			if(st->times != 0) {
-				st->times--;
+			if(st->count != 0) {
+				st->count--;
 			}
-			st->tim += st->msecs;
+			st->start += st->interval;
 		}
 		
 		if(es && ValidIOAddress(io)) {
@@ -2030,7 +2033,7 @@ void loadScript(EERIE_SCRIPT & script, PakFile * file) {
 	script.master = NULL;
 	
 	for(size_t j = 0; j < MAX_SCRIPTTIMERS; j++) {
-		script.timers[j] = 0;
+		script.timers[j] = ArxInstant_ZERO;
 	}
 	
 	ARX_SCRIPT_ComputeShortcuts(script);

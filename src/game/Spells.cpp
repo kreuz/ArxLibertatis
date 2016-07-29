@@ -138,7 +138,7 @@ short ARX_FLARES_broken(1);
 
 long snip=0;
 static Vec2s g_LastFlarePosition;
-static unsigned long g_LastFlareTime;
+static ArxInstant g_LastFlareTime;
 
 unsigned char ucFlick=0;
 
@@ -175,7 +175,7 @@ SpellBase * SpellManager::operator[](const SpellHandle handle) {
 
 void SpellManager::endSpell(SpellBase * spell)
 {
-	spell->m_duration = 0;
+	spell->m_duration = ArxDuration_ZERO;
 }
 
 void SpellManager::endByCaster(EntityHandle caster) {
@@ -548,9 +548,9 @@ void ARX_SPELLS_ManageMagic() {
 					pos = MemoMouse;
 				}
 				
-				ArxInstant now = arxtime.now_ul();
+				ArxInstant now = arxtime.now();
 				
-				const unsigned long interval = 1000 / 60;
+				const ArxDuration interval = ArxDurationMs(1000 / 60);
 				
 				if(ARX_FLARES_broken) {
 					g_LastFlarePosition = pos;
@@ -693,13 +693,14 @@ struct TARGETING_SPELL {
 	SpellcastFlags flags;
 	long level;
 	EntityHandle target;
-	long duration;
+	ArxDuration duration;
 };
 
 static TARGETING_SPELL t_spell;
 
 long LOOKING_FOR_SPELL_TARGET=0;
-ArxInstant LOOKING_FOR_SPELL_TARGET_TIME=0;
+ArxInstant LOOKING_FOR_SPELL_TARGET_TIME = ArxInstant_ZERO;
+
 void ARX_SPELLS_CancelSpellTarget() {
 	t_spell.typ = SPELL_NONE;
 	LOOKING_FOR_SPELL_TARGET=0;
@@ -889,7 +890,7 @@ static SpellBase * createSpellInstance(SpellType type) {
 
 
 
-bool ARX_SPELLS_Launch(SpellType typ, EntityHandle source, SpellcastFlags flags, long level, EntityHandle target, long duration) {
+bool ARX_SPELLS_Launch(SpellType typ, EntityHandle source, SpellcastFlags flags, long level, EntityHandle target, ArxDuration duration) {
 	
 	if(cur_rf == 3) {
 		flags |= SPELLCAST_FLAG_NOCHECKCANCAST | SPELLCAST_FLAG_NOMANA;	
@@ -959,7 +960,7 @@ bool ARX_SPELLS_Launch(SpellType typ, EntityHandle source, SpellcastFlags flags,
 		case SPELL_SLOW_DOWN:
 		case SPELL_CONFUSE:
 		{
-			LOOKING_FOR_SPELL_TARGET_TIME	= arxtime.now_ul();
+			LOOKING_FOR_SPELL_TARGET_TIME	= arxtime.now();
 			LOOKING_FOR_SPELL_TARGET		= 1;
 			t_spell.typ						= typ;
 			t_spell.flags					= flags;
@@ -970,7 +971,7 @@ bool ARX_SPELLS_Launch(SpellType typ, EntityHandle source, SpellcastFlags flags,
 		}			
 		case SPELL_ENCHANT_WEAPON:		
 		{
-			LOOKING_FOR_SPELL_TARGET_TIME	= arxtime.now_ul();
+			LOOKING_FOR_SPELL_TARGET_TIME	= arxtime.now();
 			LOOKING_FOR_SPELL_TARGET		= 2;
 			t_spell.typ						= typ;
 			t_spell.flags					= flags;
@@ -1008,7 +1009,7 @@ bool ARX_SPELLS_Launch(SpellType typ, EntityHandle source, SpellcastFlags flags,
 
 			ARX_SOUND_PlaySpeech("player_follower_attack");
 
-			LOOKING_FOR_SPELL_TARGET_TIME	= arxtime.now_ul();
+			LOOKING_FOR_SPELL_TARGET_TIME	= arxtime.now();
 			LOOKING_FOR_SPELL_TARGET		= 1;
 			t_spell.typ						= typ;
 			t_spell.flags					= flags;
@@ -1066,7 +1067,7 @@ bool ARX_SPELLS_Launch(SpellType typ, EntityHandle source, SpellcastFlags flags,
 	spell->m_level = spellLevel;
 	spell->m_flags = flags;
 	spell->m_type = typ;
-	spell->m_timcreation = arxtime.now_ul();
+	spell->m_timcreation = arxtime.now();
 	spell->m_fManaCostPerSecond = 0.f;
 	spell->m_launchDuration = duration;
 
@@ -1110,7 +1111,7 @@ void ARX_SPELLS_Update() {
 	
 	ucFlick++;
 	
-	const ArxInstant now = arxtime.now_ul();
+	const ArxInstant now = arxtime.now();
 	
 	for(size_t u = 0; u < MAX_SPELLS; u++) {
 		SpellBase * spell = spells[SpellHandle(u)];
@@ -1143,7 +1144,7 @@ void ARX_SPELLS_Update() {
 	}
 }
 
-void TryToCastSpell(Entity * io, SpellType spellType, long level, EntityHandle target, SpellcastFlags flags, long duration)
+void TryToCastSpell(Entity * io, SpellType spellType, long level, EntityHandle target, SpellcastFlags flags, ArxDuration duration)
 {
 	if(!io || io->spellcast_data.castingspell != SPELL_NONE)
 		return;

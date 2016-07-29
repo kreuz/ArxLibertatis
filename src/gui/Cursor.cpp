@@ -281,7 +281,7 @@ bool Manage3DCursor(Entity * io, bool simulate) {
 				Vec3f viewvector = movev;
 
 				Anglef angle = temp;
-				io->soundtime = 0;
+				io->soundtime = ArxInstant_ZERO;
 				io->soundcount = 0;
 				EERIE_PHYSICS_BOX_Launch(io->obj, io->pos, angle, viewvector);
 				ARX_SOUND_PlaySFX(SND_WHOOSH, &pos);
@@ -325,8 +325,8 @@ static bool SelectSpellTargetCursorRender() {
 	if(   !SPECIAL_DRAGINTER_RENDER
 	   && LOOKING_FOR_SPELL_TARGET
 	) {
-		float elapsed = arxtime.now_f() - LOOKING_FOR_SPELL_TARGET_TIME;
-		if(elapsed > 7000) {
+		ArxDuration elapsed = arxtime.now() - LOOKING_FOR_SPELL_TARGET_TIME;
+		if(elapsed > ArxDurationMs(7000)) {
 			ARX_SOUND_PlaySFX(SND_MAGIC_FIZZLE, &player.pos);
 			ARX_SPELLS_CancelSpellTarget();
 		}

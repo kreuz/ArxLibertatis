@@ -74,7 +74,7 @@ ZeniMax Media Inc., Suite 120, Rockville, Maryland 20850 USA.
 #include "graphics/VertexBuffer.h"
 #include "graphics/data/TextureContainer.h"
 #include "graphics/effects/BlobShadow.h"
-#include "graphics/effects/DrawEffects.h"
+#include "graphics/effects/PolyBoom.h"
 #include "graphics/effects/Halo.h"
 #include "graphics/particle/ParticleEffects.h"
 #include "graphics/texture/TextureStage.h"
@@ -619,13 +619,13 @@ static void ARX_PORTALS_Frustrum_ClearIndexCount(long room_num) {
 		TextureContainer * pTexCurr = *itr;
 		GRenderer->SetTexture(0, pTexCurr);
 
-		SMY_ARXMAT & roomMat = pTexCurr->tMatRoom[room_num];
+		SMY_ARXMAT & roomMat = pTexCurr->m_roomBatches.tMatRoom[room_num];
 
-		roomMat.count[SMY_ARXMAT::Opaque] = 0;
-		roomMat.count[SMY_ARXMAT::Blended] = 0;
-		roomMat.count[SMY_ARXMAT::Multiplicative] = 0;
-		roomMat.count[SMY_ARXMAT::Additive] = 0;
-		roomMat.count[SMY_ARXMAT::Subtractive] = 0;
+		roomMat.count[BatchBucket_Opaque] = 0;
+		roomMat.count[BatchBucket_Blended] = 0;
+		roomMat.count[BatchBucket_Multiplicative] = 0;
+		roomMat.count[BatchBucket_Additive] = 0;
+		roomMat.count[BatchBucket_Subtractive] = 0;
 	}
 }
 
@@ -691,10 +691,9 @@ static bool FrustrumsClipPoly(const EERIE_FRUSTRUM_DATA & frustrums,
 	return true;
 }
 
-static void CreatePlane(EERIE_FRUSTRUM & frustrum, long numplane, const Vec3f & orgn,
-                        const Vec3f & pt1, const Vec3f & pt2) {
+static Plane CreatePlane(const Vec3f & orgn, const Vec3f & pt1, const Vec3f & pt2) {
 	
-	Plane & plane = frustrum.plane[numplane];
+	Plane plane;
 	
 	Vec3f A = pt1 - orgn;
 	Vec3f B = pt2 - orgn;
@@ -710,24 +709,32 @@ static void CreatePlane(EERIE_FRUSTRUM & frustrum, long numplane, const Vec3f & 
 	plane.b *= epnlen;
 	plane.c *= epnlen;
 	plane.d = -(orgn.x * plane.a + orgn.y * plane.b + orgn.z * plane.c);
+	
+	return plane;
 }
 
-static void CreateFrustrum(EERIE_FRUSTRUM & frustrum, const Vec3f & pos,
-                           const EERIEPOLY & ep, bool cull) {
+static EERIE_FRUSTRUM CreateFrustrum(const Vec3f & pos, const EERIEPOLY & ep, bool cull) {
+	
+	EERIE_FRUSTRUM frustrum;
+	
 	if(cull) {
-		CreatePlane(frustrum, 0, pos, ep.v[0].p, ep.v[1].p);
-		CreatePlane(frustrum, 1, pos, ep.v[3].p, ep.v[2].p);
-		CreatePlane(frustrum, 2, pos, ep.v[1].p, ep.v[3].p);
-		CreatePlane(frustrum, 3, pos, ep.v[2].p, ep.v[0].p);
+		frustrum.plane[0] = CreatePlane(pos, ep.v[0].p, ep.v[1].p);
+		frustrum.plane[1] = CreatePlane(pos, ep.v[3].p, ep.v[2].p);
+		frustrum.plane[2] = CreatePlane(pos, ep.v[1].p, ep.v[3].p);
+		frustrum.plane[3] = CreatePlane(pos, ep.v[2].p, ep.v[0].p);
 	} else {
-		CreatePlane(frustrum, 0, pos, ep.v[1].p, ep.v[0].p);
-		CreatePlane(frustrum, 1, pos, ep.v[2].p, ep.v[3].p);
-		CreatePlane(frustrum, 2, pos, ep.v[3].p, ep.v[1].p);
-		CreatePlane(frustrum, 3, pos, ep.v[0].p, ep.v[2].p);
+		frustrum.plane[0] = CreatePlane(pos, ep.v[1].p, ep.v[0].p);
+		frustrum.plane[1] = CreatePlane(pos, ep.v[2].p, ep.v[3].p);
+		frustrum.plane[2] = CreatePlane(pos, ep.v[3].p, ep.v[1].p);
+		frustrum.plane[3] = CreatePlane(pos, ep.v[0].p, ep.v[2].p);
 	}
+	
+	return frustrum;
 }
 
-static void CreateScreenFrustrum(EERIE_FRUSTRUM & frustrum) {
+static EERIE_FRUSTRUM CreateScreenFrustrum() {
+	
+	EERIE_FRUSTRUM frustrum;
 	
 	glm::mat4x4 matProj;
 	GRenderer->GetProjectionMatrix(matProj);
@@ -796,6 +803,8 @@ static void CreateScreenFrustrum(EERIE_FRUSTRUM & frustrum) {
 	
 	normalizePlane(plane);
 	}
+	
+	return frustrum;
 }
 
 void RoomDrawRelease() {
@@ -1077,16 +1086,16 @@ static void ARX_PORTALS_Frustrum_RenderRoomTCullSoft(long room_num,
 	SMY_VERTEX * pMyVertex = room.pVertexBuffer->lock(NoOverwrite);
 
 	unsigned short *pIndices=room.indexBuffer;
-
-	EP_DATA *pEPDATA = &room.epdata[0];
-
-	for(long lll=0; lll<room.nb_polys; lll++, pEPDATA++) {
-		EERIE_BKG_INFO *feg = &ACTIVEBKG->fastdata[pEPDATA->p.x][pEPDATA->p.y];
+	
+	for(long lll=0; lll<room.nb_polys; lll++) {
+		const EP_DATA & pEPDATA = room.epdata[lll];
+		
+		EERIE_BKG_INFO *feg = &ACTIVEBKG->fastdata[pEPDATA.p.x][pEPDATA.p.y];
 
 		if(!feg->treat) {
 			// TODO copy-paste background tiles
-			int tilex = pEPDATA->p.x;
-			int tilez = pEPDATA->p.y;
+			int tilex = pEPDATA.p.x;
+			int tilez = pEPDATA.p.y;
 			int radius = 1;
 			
 			int minx = std::max(tilex - radius, 0);
@@ -1105,7 +1114,7 @@ static void ARX_PORTALS_Frustrum_RenderRoomTCullSoft(long room_num,
 			}
 		}
 
-		EERIEPOLY *ep = &feg->polydata[pEPDATA->idx];
+		EERIEPOLY *ep = &feg->polydata[pEPDATA.idx];
 
 		if(!ep->tex) {
 			continue;
@@ -1132,23 +1141,23 @@ static void ARX_PORTALS_Frustrum_RenderRoomTCullSoft(long room_num,
 			}
 		}
 
-		SMY_ARXMAT::TransparencyType transparencyType;
+		BatchBucket transparencyType;
 
 		if(ep->type & POLY_TRANS) {
 			if(ep->transval >= 2.f) {
-				transparencyType = SMY_ARXMAT::Multiplicative;
+				transparencyType = BatchBucket_Multiplicative;
 			} else if(ep->transval >= 1.f) {
-				transparencyType = SMY_ARXMAT::Additive;
+				transparencyType = BatchBucket_Additive;
 			} else if(ep->transval > 0.f) {
-				transparencyType = SMY_ARXMAT::Blended;
+				transparencyType = BatchBucket_Blended;
 			} else {
-				transparencyType = SMY_ARXMAT::Subtractive;
+				transparencyType = BatchBucket_Subtractive;
 			}
 		} else {
-			transparencyType = SMY_ARXMAT::Opaque;
+			transparencyType = BatchBucket_Opaque;
 		}
 
-		SMY_ARXMAT & roomMat = ep->tex->tMatRoom[room_num];
+		SMY_ARXMAT & roomMat = ep->tex->m_roomBatches.tMatRoom[room_num];
 
 		unsigned short * pIndicesCurr = pIndices + roomMat.offset[transparencyType] + roomMat.count[transparencyType];
 		unsigned long * pNumIndices = &roomMat.count[transparencyType];
@@ -1178,7 +1187,7 @@ static void ARX_PORTALS_Frustrum_RenderRoomTCullSoft(long room_num,
 				}
 			} else {
 				if(!(ep->type & POLY_TRANS)) {
-					ApplyTileLights(ep, pEPDATA->p);
+					ApplyTileLights(ep, pEPDATA.p);
 
 					pMyVertexCurr[ep->uslInd[0]].color = ep->tv[0].color;
 					pMyVertexCurr[ep->uslInd[1]].color = ep->tv[1].color;
@@ -1204,7 +1213,7 @@ static void ARX_PORTALS_Frustrum_RenderRoomTCullSoft(long room_num,
 					continue;
 				}
 
-				ApplyTileLights(ep, pEPDATA->p);
+				ApplyTileLights(ep, pEPDATA.p);
 
 				for(int k = 0; k < to; k++) {
 					long lr = Color::fromRGBA(ep->tv[k].color).r;
@@ -1249,12 +1258,12 @@ static void ARX_PORTALS_Frustrum_RenderRoomTCullSoft(long room_num,
 }
 
 
-static void ARX_PORTALS_Frustrum_RenderRoomTCullSoftRender(long room_num) {
+static void BackgroundRenderOpaque(long room_num) {
 	
 	ARX_PROFILE_FUNC();
 	
 	EERIE_ROOM_DATA & room = portals->rooms[room_num];
-
+	
 	//render opaque
 	GRenderer->SetCulling(CullNone);
 	GRenderer->SetAlphaFunc(Renderer::CmpGreater, .5f);
@@ -1263,26 +1272,24 @@ static void ARX_PORTALS_Frustrum_RenderRoomTCullSoftRender(long room_num) {
 	for(itr = room.ppTextureContainer.begin(); itr != room.ppTextureContainer.end(); ++itr) {
 		
 		TextureContainer *pTexCurr = *itr;
-		const SMY_ARXMAT & roomMat = pTexCurr->tMatRoom[room_num];
-
+		const SMY_ARXMAT & roomMat = pTexCurr->m_roomBatches.tMatRoom[room_num];
+		
 		GRenderer->SetTexture(0, pTexCurr);
-
-		if(roomMat.count[SMY_ARXMAT::Opaque]) {
+		
+		if(roomMat.count[BatchBucket_Opaque]) {
 			if (pTexCurr->userflags & POLY_METAL)
 				GRenderer->GetTextureStage(0)->setColorOp(TextureStage::OpModulate2X);
 			else
 				GRenderer->GetTextureStage(0)->setColorOp(TextureStage::OpModulate);
-
 			
-
 			room.pVertexBuffer->drawIndexed(
 				Renderer::TriangleList,
 				roomMat.uslNbVertex,
 				roomMat.uslStartVertex,
-				&room.indexBuffer[roomMat.offset[SMY_ARXMAT::Opaque]],
-				roomMat.count[SMY_ARXMAT::Opaque]);
-
-			EERIEDrawnPolys += roomMat.count[SMY_ARXMAT::Opaque];
+				&room.indexBuffer[roomMat.offset[BatchBucket_Opaque]],
+				roomMat.count[BatchBucket_Opaque]);
+			
+			EERIEDrawnPolys += roomMat.count[BatchBucket_Opaque];
 		}
 	}
 	
@@ -1293,15 +1300,15 @@ static void ARX_PORTALS_Frustrum_RenderRoomTCullSoftRender(long room_num) {
 
 //-----------------------------------------------------------------------------
 
-static const SMY_ARXMAT::TransparencyType transRenderOrder[] = {
-	SMY_ARXMAT::Blended,
-	SMY_ARXMAT::Multiplicative,
-	SMY_ARXMAT::Additive,
-	SMY_ARXMAT::Subtractive
+static const BatchBucket transRenderOrder[] = {
+	BatchBucket_Blended,
+	BatchBucket_Multiplicative,
+	BatchBucket_Additive,
+	BatchBucket_Subtractive
 };
 
 
-static void ARX_PORTALS_Frustrum_RenderRoom_TransparencyTSoftCull(long room_num) {
+static void BackgroundRenderTransparent(long room_num) {
 	
 	ARX_PROFILE_FUNC();
 	
@@ -1314,36 +1321,36 @@ static void ARX_PORTALS_Frustrum_RenderRoom_TransparencyTSoftCull(long room_num)
 		TextureContainer * pTexCurr = *itr;
 		GRenderer->SetTexture(0, pTexCurr);
 
-		SMY_ARXMAT & roomMat = pTexCurr->tMatRoom[room_num];
+		SMY_ARXMAT & roomMat = pTexCurr->m_roomBatches.tMatRoom[room_num];
 
 		for(size_t i = 0; i < ARRAY_SIZE(transRenderOrder); i++) {
-			SMY_ARXMAT::TransparencyType transType = transRenderOrder[i];
+			BatchBucket transType = transRenderOrder[i];
 
 			if(!roomMat.count[transType])
 				continue;
 
 			switch(transType) {
-			case SMY_ARXMAT::Opaque: {
+			case BatchBucket_Opaque: {
 				// This should currently not happen
 				arx_assert(false);
 				continue;
 			}
-			case SMY_ARXMAT::Blended: {
+			case BatchBucket_Blended: {
 				GRenderer->SetDepthBias(2);
 				GRenderer->SetBlendFunc(BlendSrcColor, BlendDstColor);
 				break;
 			}
-			case SMY_ARXMAT::Multiplicative: {
+			case BatchBucket_Multiplicative: {
 				GRenderer->SetDepthBias(2);
 				GRenderer->SetBlendFunc(BlendOne, BlendOne);
 				break;
 			}
-			case SMY_ARXMAT::Additive: {
+			case BatchBucket_Additive: {
 				GRenderer->SetDepthBias(2);
 				GRenderer->SetBlendFunc(BlendOne, BlendOne);
 				break;
 			}
-			case SMY_ARXMAT::Subtractive: {
+			case BatchBucket_Subtractive: {
 				GRenderer->SetDepthBias(8);
 				GRenderer->SetBlendFunc(BlendZero, BlendInvSrcColor);
 				break;
@@ -1417,8 +1424,7 @@ static void ARX_PORTALS_Frustrum_ComputeRoom(size_t roomIndex,
 
 		bool Cull = !(fRes<0.f);
 		
-		EERIE_FRUSTRUM fd;
-		CreateFrustrum(fd, camPos, epp, Cull);
+		EERIE_FRUSTRUM fd = CreateFrustrum(camPos, epp, Cull);
 
 		size_t roomToCompute = 0;
 		bool computeRoom = false;
@@ -1443,7 +1449,7 @@ void ARX_SCENE_Update() {
 	
 	ARX_PROFILE_FUNC();
 	
-	ArxInstant now = arxtime.now_ul();
+	ArxInstant now = arxtime.now();
 	
 	WATEREFFECT = (now % long(2 * glm::pi<float>() / 0.0005f)) * 0.0005f;
 	
@@ -1484,8 +1490,7 @@ void ARX_SCENE_Update() {
 
 		ARX_PORTALS_InitDrawnRooms();
 		size_t roomIndex = static_cast<size_t>(room_num);
-		EERIE_FRUSTRUM frustrum;
-		CreateScreenFrustrum(frustrum);
+		EERIE_FRUSTRUM frustrum = CreateScreenFrustrum();
 		ARX_PORTALS_Frustrum_ComputeRoom(roomIndex, frustrum, camPos, camDepth);
 
 		for(size_t i = 0; i < RoomDrawList.size(); i++) {
@@ -1514,36 +1519,36 @@ void ARX_SCENE_Render() {
 	
 	if(uw_mode)
 		GRenderer->GetTextureStage(0)->setMipMapLODBias(10.f);
-
+	
 	GRenderer->SetBlendFunc(BlendZero, BlendInvSrcColor);
 	for(size_t i = 0; i < RoomDrawList.size(); i++) {
-
-		ARX_PORTALS_Frustrum_RenderRoomTCullSoftRender(RoomDrawList[i]);
+		
+		BackgroundRenderOpaque(RoomDrawList[i]);
 	}
-
+	
 	if(!player.m_improve) {
 		ARXDRAW_DrawInterShadows();
 	}
-
+	
 	ARX_THROWN_OBJECT_Render();
-		
+	
 	GRenderer->GetTextureStage(0)->setWrapMode(TextureStage::WrapClamp);
 	GRenderer->GetTextureStage(0)->setMipMapLODBias(-0.6f);
-
+	
 	RenderInter();
-
+	
 	GRenderer->GetTextureStage(0)->setWrapMode(TextureStage::WrapRepeat);
 	GRenderer->GetTextureStage(0)->setMipMapLODBias(-0.3f);
-		
+	
 	// To render Dragged objs
 	if(DRAGINTER) {
 		SPECIAL_DRAGINTER_RENDER=1;
 		ARX_INTERFACE_RenderCursor();
-
+		
 		SPECIAL_DRAGINTER_RENDER=0;
 	}
-
-	PopAllTriangleList();
+	
+	PopAllTriangleListOpaque();
 	
 	// *Now* draw the player
 	if(entities.player()->animlayer[0].cur_anim) {
@@ -1553,46 +1558,46 @@ void ARX_SCENE_Render() {
 			// In first person mode, always render the player over other objects
 			// in order to avoid clipping the player and weapon with walls.
 			GRenderer->SetRenderState(Renderer::DepthTest, false);
-			PopAllTriangleList(/*clear=*/false);
+			PopAllTriangleListOpaque(/*clear=*/false);
 			GRenderer->SetRenderState(Renderer::DepthTest, true);
 		}
-		PopAllTriangleList();
+		PopAllTriangleListOpaque();
 	}
 	
 	ARXDRAW_DrawEyeBall();
-
+	
 	GRenderer->SetRenderState(Renderer::DepthWrite, false);
-
-	ARXDRAW_DrawPolyBoom();
-
+	
+	PolyBoomDraw();
+	
 	PopAllTriangleListTransparency();
-
+	
 	GRenderer->SetFogColor(Color::none);
 	GRenderer->SetRenderState(Renderer::AlphaBlending, true);
 	GRenderer->SetCulling(CullNone);
 	GRenderer->SetRenderState(Renderer::DepthWrite, false);
 	GRenderer->SetAlphaFunc(Renderer::CmpGreater, .5f);
-
+	
 	for(size_t i = 0; i < RoomDrawList.size(); i++) {
-
-		ARX_PORTALS_Frustrum_RenderRoom_TransparencyTSoftCull(RoomDrawList[i]);
+		
+		BackgroundRenderTransparent(RoomDrawList[i]);
 	}
-
+	
 	GRenderer->SetDepthBias(8);
 	GRenderer->SetRenderState(Renderer::DepthWrite, false);
 	GRenderer->SetCulling(CullCW);
 	GRenderer->SetAlphaFunc(Renderer::CmpNotEqual, 0.f);
-
+	
 	RenderWater();
 	RenderLava();
-
+	
 	GRenderer->SetDepthBias(0);
 	GRenderer->SetFogColor(ulBKGColor);
 	GRenderer->GetTextureStage(0)->setColorOp(TextureStage::OpModulate);
 	GRenderer->SetRenderState(Renderer::AlphaBlending, false);
-
+	
 	Halo_Render();
-
+	
 	GRenderer->SetCulling(CullCCW);
 	GRenderer->SetRenderState(Renderer::AlphaBlending, false);	
 	GRenderer->SetRenderState(Renderer::DepthWrite, true);

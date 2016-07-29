@@ -79,7 +79,7 @@ void FlyingEyeSpell::Launch()
 	ARX_SOUND_PlaySFX(SND_SPELL_EYEBALL_IN);
 	
 	m_lastupdate = m_timcreation;
-	m_duration = 1000000;
+	m_duration = ArxDurationMs(1000000);
 	m_hasDuration = true;
 	m_fManaCostPerSecond = 3.2f;
 	eyeball.exist = 1;
@@ -103,8 +103,8 @@ void FlyingEyeSpell::Launch()
 		pd->tolive = Random::getu(2000, 6000);
 		pd->scale = Vec3f(12.f);
 		pd->tc = tc4;
-		pd->special = FADE_IN_AND_OUT | ROTATING | MODULATE_ROTATION | DISSIPATING;
-		pd->fparam = 0.0000001f;
+		pd->m_flags = FADE_IN_AND_OUT | ROTATING | DISSIPATING;
+		pd->m_rotation = 0.0000001f;
 		pd->rgb = Color3f(0.7f, 0.7f, 1.f);
 	}
 	
@@ -136,8 +136,8 @@ void FlyingEyeSpell::End()
 		pd->tolive = Random::getu(2000, 6000);
 		pd->scale = Vec3f(12.f);
 		pd->tc = tc4;
-		pd->special = FADE_IN_AND_OUT | ROTATING | MODULATE_ROTATION | DISSIPATING;
-		pd->fparam = 0.0000001f;
+		pd->m_flags = FADE_IN_AND_OUT | ROTATING | DISSIPATING;
+		pd->m_rotation = 0.0000001f;
 		pd->rgb = Color3f(0.7f, 0.7f, 1.f);
 	}
 	
@@ -149,14 +149,14 @@ void FlyingEyeSpell::End()
 
 void FlyingEyeSpell::Update() {
 	
-	const ArxInstant now = arxtime.now_ul();
+	const ArxInstant now = arxtime.now();
 	
-	const long framediff3 = now - m_lastupdate;
+	const ArxDuration framediff3 = now - m_lastupdate;
 	
-	eyeball.floating = std::sin(m_lastupdate-m_timcreation * 0.001f);
+	eyeball.floating = std::sin(m_lastupdate - m_timcreation * 0.001f);
 	eyeball.floating *= 10.f;
 	
-	if(m_lastupdate-m_timcreation <= 3000) {
+	if(m_lastupdate - m_timcreation <= ArxDurationMs(3000)) {
 		eyeball.exist = m_lastupdate - m_timcreation * (1.0f / 30);
 		eyeball.size = Vec3f(1.f - float(eyeball.exist) * 0.01f);
 		eyeball.angle.setPitch(eyeball.angle.getPitch() + framediff3 * 0.6f);
@@ -164,7 +164,7 @@ void FlyingEyeSpell::Update() {
 		eyeball.exist = 2;
 	}
 	
-	m_lastupdate=now;
+	m_lastupdate = now;
 	
 	Entity * io = entities.player();
 	EERIE_3DOBJ * eobj = io->obj;
@@ -206,10 +206,10 @@ void FlyingEyeSpell::Update() {
 				pd->tolive = Random::getu(1500, 3500);
 				pd->scale = Vec3f(0.2f);
 				pd->tc = TC_smoke;
-				pd->special = FADE_IN_AND_OUT | ROTATING | MODULATE_ROTATION | DISSIPATING;
+				pd->m_flags = FADE_IN_AND_OUT | ROTATING | DISSIPATING;
 				pd->sourceionum = PlayerEntityHandle;
 				pd->source = &eobj->vertexlist3[id.handleData()].v; // FIXME passing of pointer to vertex position
-				pd->fparam = 0.0000001f;
+				pd->m_rotation = 0.0000001f;
 				pd->rgb = Color3f(.7f, .3f, 1.f) + Color3f(-.1f, -.1f, -.1f) * randomColor3f();
 			}
 		}
@@ -232,7 +232,7 @@ void FireFieldSpell::Launch() {
 	
 	ARX_SOUND_PlaySFX(SND_SPELL_FIRE_FIELD_START);
 	
-	m_duration = (m_launchDuration > -1) ? m_launchDuration : 100000;
+	m_duration = (m_launchDuration > ArxDuration(-1)) ? m_launchDuration : ArxDurationMs(100000);
 	m_hasDuration = true;
 	m_fManaCostPerSecond = 2.8f;
 	m_light = LightHandle();
@@ -264,7 +264,7 @@ void FireFieldSpell::Launch() {
 	damage.radius = 150.f;
 	damage.damages = 10.f;
 	damage.area = DAMAGE_FULL;
-	damage.duration = 100000000;
+	damage.duration = ArxDurationMs(100000000);
 	damage.source = m_caster;
 	damage.flags = 0;
 	damage.type = DAMAGE_TYPE_MAGICAL | DAMAGE_TYPE_FIRE | DAMAGE_TYPE_FIELD;
@@ -375,7 +375,7 @@ void FireFieldSpell::Update() {
 		el->fallstart = Random::getf(150.f, 180.f);
 		el->fallend   = Random::getf(290.f, 320.f);
 		el->rgb = Color3f(1.f, 0.8f, 0.6f) + Color3f(Random::getf(-0.1f, 0.f), 0.f, 0.f);
-		el->duration = 600;
+		el->duration = ArxDurationMs(600);
 		el->extras=0;
 	}
 	
@@ -402,8 +402,8 @@ void FireFieldSpell::Update() {
 			pd->siz = 7.f;
 			pd->tolive = Random::getu(500, 1500);
 			pd->tc = fire2;
-			pd->special = ROTATING | MODULATE_ROTATION | FIRE_TO_SMOKE;
-			pd->fparam = Random::getf(-0.1f, 0.1f);
+			pd->m_flags = ROTATING | FIRE_TO_SMOKE;
+			pd->m_rotation = Random::getf(-0.1f, 0.1f);
 			pd->scale = Vec3f(-8.f);
 			
 			PARTICLE_DEF * pd2 = createParticle();
@@ -437,7 +437,7 @@ void IceFieldSpell::Launch()
 	
 	ARX_SOUND_PlaySFX(SND_SPELL_ICE_FIELD);
 	
-	m_duration = (m_launchDuration > -1) ? m_launchDuration : 100000;
+	m_duration = (m_launchDuration > ArxDuration(-1)) ? m_launchDuration : ArxDurationMs(100000);
 	m_hasDuration = true;
 	m_fManaCostPerSecond = 2.8f;
 	m_light = LightHandle();
@@ -469,7 +469,7 @@ void IceFieldSpell::Launch()
 	damage.radius = 150.f;
 	damage.damages = 10.f;
 	damage.area = DAMAGE_FULL;
-	damage.duration = 100000000;
+	damage.duration = ArxDurationMs(100000000);
 	damage.source = m_caster;
 	damage.flags = 0;
 	damage.type = DAMAGE_TYPE_MAGICAL | DAMAGE_TYPE_COLD | DAMAGE_TYPE_FIELD;
@@ -534,7 +534,7 @@ void IceFieldSpell::Update() {
 		el->fallstart = Random::getf(150.f, 180.f);
 		el->fallend   = Random::getf(290.f, 320.f);
 		el->rgb = Color3f(0.76f, 0.76f, 1.0f) + Color3f(0.f, 0.f, Random::getf(-0.1f, 0.f));
-		el->duration = 600;
+		el->duration = ArxDurationMs(600);
 		el->extras=0;
 	}
 
@@ -594,8 +594,8 @@ void IceFieldSpell::Update() {
 				pd->siz = 20.f;
 				pd->tolive = Random::getu(2000, 6000);
 				pd->tc = tex_p2;
-				pd->special = FADE_IN_AND_OUT | ROTATING | MODULATE_ROTATION | DISSIPATING;
-				pd->fparam = 0.0000001f;
+				pd->m_flags = FADE_IN_AND_OUT | ROTATING | DISSIPATING;
+				pd->m_rotation = 0.0000001f;
 				pd->rgb = Color3f(0.7f, 0.7f, 1.f);
 			}
 			
@@ -608,8 +608,8 @@ void IceFieldSpell::Update() {
 				pd->siz = 0.5f;
 				pd->tolive = Random::getu(2000, 6000);
 				pd->tc = tex_p1;
-				pd->special = FADE_IN_AND_OUT | ROTATING | MODULATE_ROTATION | DISSIPATING;
-				pd->fparam = 0.0000001f;
+				pd->m_flags = FADE_IN_AND_OUT | ROTATING | DISSIPATING;
+				pd->m_rotation = 0.0000001f;
 				pd->rgb = Color3f(0.7f, 0.7f, 1.f);
 			}
 			
@@ -626,9 +626,9 @@ void LightningStrikeSpell::Launch() {
 	
 	Vec3f target(0.f, 0.f, -500.f);
 	m_lightning.Create(Vec3f_ZERO, target);
-	m_lightning.SetDuration(long(500 * m_level));
+	m_lightning.SetDuration(ArxDurationMs(500 * m_level));
 	m_lightning.m_isMassLightning = false;
-	m_duration = m_lightning.GetDuration();
+	m_duration = m_lightning.m_duration;
 	
 	ARX_SOUND_PlaySFX(SND_SPELL_LIGHTNING_START, &m_caster_pos);
 	
@@ -699,7 +699,7 @@ void LightningStrikeSpell::Update() {
 	m_lightning.m_caster = m_caster;
 	m_lightning.m_level = m_level;
 	
-	m_lightning.Update(g_framedelay);
+	m_lightning.Update(ArxDurationMs(g_framedelay));
 	m_lightning.Render();
 	
 	ARX_SOUND_RefreshPosition(m_snd_loop, entities[m_caster]->pos);
@@ -719,7 +719,7 @@ void ConfuseSpell::Launch() {
 	
 	m_hasDuration = true;
 	m_fManaCostPerSecond = 1.5f;
-	m_duration = (m_launchDuration > -1) ? m_launchDuration : 5000;
+	m_duration = (m_launchDuration > ArxDuration(-1)) ? m_launchDuration : ArxDurationMs(5000);
 	
 	
 	tex_p1 = TextureContainer::Load("graph/obj3d/textures/(fx)_tsu_blueting");
@@ -746,7 +746,7 @@ void ConfuseSpell::Launch() {
 void ConfuseSpell::End() {
 	
 	m_targets.clear();
-	endLightDelayed(m_light, 500);
+	endLightDelayed(m_light, ArxDurationMs(500));
 }
 
 void ConfuseSpell::Update() {
@@ -791,9 +791,8 @@ void ConfuseSpell::Update() {
 		pd->siz = 0.25f;
 		pd->tolive = Random::getu(2300, 3300);
 		pd->tc = tex_p1;
-		pd->special = PARTICLE_GOLDRAIN | FADE_IN_AND_OUT | ROTATING | MODULATE_ROTATION
-					  | DISSIPATING;
-		pd->fparam = 0.0000001f;
+		pd->m_flags = PARTICLE_GOLDRAIN | FADE_IN_AND_OUT | ROTATING | DISSIPATING;
+		pd->m_rotation = 0.0000001f;
 		
 		Color3f baseColor = Color3f(0.4f, 0.2f, 0.4f);
 		Color3f randomFactor = Color3f(0.4f, 0.6f, 0.4f);
@@ -815,7 +814,7 @@ void ConfuseSpell::Update() {
 		light->fallend   = 420.f;
 		light->rgb = Color3f(0.3f, 0.3f, 0.5f) + Color3f(0.2f, 0.f, 0.2f) * randomColor3f();
 		light->pos = eCurPos;
-		light->duration = 200;
+		light->duration = ArxDurationMs(200);
 		light->extras = 0;
 	}
 }

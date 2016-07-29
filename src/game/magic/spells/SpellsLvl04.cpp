@@ -37,6 +37,16 @@
 #include "scene/Interactive.h"
 
 
+BlessSpell::BlessSpell()
+	: SpellBase()
+	, m_pos(Vec3f_ZERO)
+	, m_yaw(0)
+	, m_scale(0)
+	, tex_p1(NULL)
+	, tex_sol(NULL)
+	, fRot(0)
+{ }
+
 bool BlessSpell::CanLaunch()
 {
 	return !spells.ExistAnyInstanceForThisCaster(m_type, m_caster);
@@ -54,7 +64,7 @@ void BlessSpell::Launch()
 	
 	// TODO m_launchDuration is not used
 	// m_duration = (m_launchDuration > -1) ? m_launchDuration : 2000000;
-	m_duration = 20000;
+	m_duration = ArxDurationMs(20000);
 	m_hasDuration = true;
 	m_fManaCostPerSecond = 0.3333f * m_level;
 	
@@ -145,8 +155,8 @@ void BlessSpell::Update() {
 		pd->siz = 0.005f;
 		pd->tolive = Random::getu(1000, 2000);
 		pd->tc = tex_p1;
-		pd->special = FADE_IN_AND_OUT | ROTATING | MODULATE_ROTATION | DISSIPATING;
-		pd->fparam = 0.0000001f;
+		pd->m_flags = FADE_IN_AND_OUT | ROTATING | DISSIPATING;
+		pd->m_rotation = 0.0000001f;
 		pd->rgb = Color3f(0.7f, 0.6f, 0.2f);
 	}
 }
@@ -157,7 +167,7 @@ Vec3f BlessSpell::getPosition() {
 
 void DispellFieldSpell::Launch()
 {
-	m_duration = 10;
+	m_duration = ArxDurationMs(10);
 	
 	long valid = 0, dispelled = 0;
 
@@ -227,10 +237,10 @@ void FireProtectionSpell::Launch()
 	spells.endByCaster(m_caster, SPELL_LOWER_ARMOR);
 	spells.endByCaster(m_caster, SPELL_COLD_PROTECTION);
 	
-	m_duration = (m_launchDuration > -1) ? m_launchDuration : 20000;
+	m_duration = (m_launchDuration > ArxDuration(-1)) ? m_launchDuration : ArxDurationMs(20000);
 	
 	if(m_caster == PlayerEntityHandle)
-		m_duration = 2000000;
+		m_duration = ArxDurationMs(2000000);
 	
 	if(m_caster == PlayerEntityHandle) {
 		m_target = PlayerEntityHandle;
@@ -292,10 +302,10 @@ void ColdProtectionSpell::Launch()
 	
 	ARX_SOUND_PlaySFX(SND_SPELL_COLD_PROTECTION_START, &entities[m_target]->pos);
 	
-	m_duration = (m_launchDuration > -1) ? m_launchDuration : 20000;
+	m_duration = (m_launchDuration > ArxDuration(-1)) ? m_launchDuration : ArxDurationMs(20000);
 	
 	if(m_caster == PlayerEntityHandle)
-		m_duration = 2000000;
+		m_duration = ArxDurationMs(2000000);
 	
 	m_hasDuration = true;
 	m_fManaCostPerSecond = 1.f;
@@ -345,7 +355,7 @@ bool TelekinesisSpell::CanLaunch()
 
 void TelekinesisSpell::Launch()
 {
-	m_duration = (m_launchDuration > -1) ? m_launchDuration : 6000000;
+	m_duration = (m_launchDuration > ArxDuration(-1)) ? m_launchDuration : ArxDurationMs(6000000);
 	m_hasDuration = true;
 	m_fManaCostPerSecond = 0.9f;
 	
@@ -378,7 +388,7 @@ void CurseSpell::Launch()
 	
 	ARX_SOUND_PlaySFX(SND_SPELL_CURSE, &entities[m_target]->pos);
 	
-	m_duration = (m_launchDuration > -1) ? m_launchDuration : 2000000;
+	m_duration = (m_launchDuration > ArxDuration(-1)) ? m_launchDuration : ArxDurationMs(2000000);
 	m_hasDuration = true;
 	m_fManaCostPerSecond = 0.5f * m_level;
 	
@@ -435,8 +445,8 @@ void CurseSpell::Update() {
 		pd->siz = 0.015f;
 		pd->tolive = Random::getu(1000, 1600);
 		pd->tc = tex_p1;
-		pd->special = ROTATING | MODULATE_ROTATION | DISSIPATING | SUBSTRACT | GRAVITY;
-		pd->fparam = 0.0000001f;
+		pd->m_flags = ROTATING | DISSIPATING | SUBSTRACT | GRAVITY;
+		pd->m_rotation = 0.0000001f;
 	}
 }
 

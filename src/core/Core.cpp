@@ -111,13 +111,14 @@ ZeniMax Media Inc., Suite 120, Rockville, Maryland 20850 USA.
 #include "graphics/Renderer.h"
 #include "graphics/Vertex.h"
 #include "graphics/data/TextureContainer.h"
-#include "graphics/effects/DrawEffects.h"
+#include "graphics/effects/PolyBoom.h"
 #include "graphics/effects/Fade.h"
 #include "graphics/effects/Fog.h"
 #include "graphics/image/Image.h"
 #include "graphics/particle/ParticleEffects.h"
 #include "graphics/particle/ParticleManager.h"
 #include "graphics/particle/MagicFlare.h"
+#include "graphics/particle/Spark.h"
 #include "graphics/texture/TextureStage.h"
 
 #include "gui/Cursor.h"
@@ -354,7 +355,7 @@ static void PlayerLaunchArrow_Test(float aimratio, float poisonous, const Vec3f 
 //*************************************************************************************
 void SetEditMode(long ed, const bool stop_sound) {
 	
-	LAST_JUMP_ENDTIME = 0;
+	LAST_JUMP_ENDTIME = ArxInstant_ZERO;
 	
 	if(!DONT_ERASE_PLAYER) {
 		player.lifePool.current = 0.1f;
@@ -416,12 +417,14 @@ void levelInit() {
 	if(LOAD_N_ERASE)
 		arxtime.init();
 
-	ARX_BOOMS_ClearAllPolyBooms();
+	PolyBoomClear();
 	ARX_DAMAGES_Reset();
 	ARX_MISSILES_ClearAll();
 	spells.clearAll();
 	ARX_SPELLS_ClearAllSymbolDraw();
+	
 	ARX_PARTICLES_ClearAll();
+	ParticleSparkClear();
 
 	if(LOAD_N_ERASE) {
 		CleanScriptLoadedIO();
@@ -589,16 +592,16 @@ void levelInit() {
 
 	entities.player()->_npcdata->vvpos = -99999;
 
-	SendGameReadyMsg();
-	PLAYER_MOUSELOOK_ON = false;
-	player.Interface &= ~INTER_NOTE;
-
 	if(!TIME_INIT) {
 		arxtime.force_time_restore(FORCE_TIME_RESTORE);
 		arxtime.force_frame_time_restore(FORCE_TIME_RESTORE);
 	} else {
 		arxtime.resume();
 	}
+
+	SendGameReadyMsg();
+	PLAYER_MOUSELOOK_ON = false;
+	player.Interface &= ~INTER_NOTE;
 
 	EntityHandle t = entities.getById("seat_stool1_0012");
 	if(ValidIONum(t)) {
@@ -671,7 +674,7 @@ static bool StrikeAimtime() {
 	
 	ARX_PLAYER_Remove_Invisibility();
 	
-	const ArxDuration delta = arxtime.now_ul() - player.m_aimTime;
+	const ArxDuration delta = arxtime.now() - player.m_aimTime;
 	player.m_strikeAimRatio = delta * (1.f+(1.f-GLOBAL_SLOWDOWN));
 
 	if(player.m_strikeAimRatio > player.Full_AimTime)
@@ -720,14 +723,14 @@ void ManageCombatModeAnimations() {
 	if(weapontype == WEAPON_BARE && LAST_WEAPON_TYPE != weapontype) {
 		if(layer1.cur_anim != alist[ANIM_BARE_WAIT]) {
 			changeAnimation(io, 1, alist[ANIM_BARE_WAIT]);
-			player.m_aimTime = 0;
+			player.m_aimTime = ArxInstant_ZERO;
 		}
 	}
 	
 	switch(weapontype) {
 		case WEAPON_BARE: { // BARE HANDS PLAYER MANAGEMENT
 			if(layer1.cur_anim == alist[ANIM_BARE_WAIT]) {
-				player.m_aimTime = 0;
+				player.m_aimTime = ArxInstant_ZERO;
 				if(eeMousePressed1()) {
 					changeAnimation(io, 1, alist[ANIM_BARE_STRIKE_LEFT_START + player.m_strikeDirection * 3]);
 					io->isHit = false;
@@ -738,19 +741,19 @@ void ManageCombatModeAnimations() {
 			for(long j = 0; j < 4; j++) {
 				if(layer1.cur_anim == alist[ANIM_BARE_STRIKE_LEFT_START+j*3] && (layer1.flags & EA_ANIMEND)) {
 					changeAnimation(io, 1, alist[ANIM_BARE_STRIKE_LEFT_CYCLE + j * 3], EA_LOOP);
-					player.m_aimTime = arxtime.now_ul();
+					player.m_aimTime = arxtime.now();
 				} else if(layer1.cur_anim == alist[ANIM_BARE_STRIKE_LEFT_CYCLE+j*3] && !eeMousePressed1()) {
 					changeAnimation(io, 1, alist[ANIM_BARE_STRIKE_LEFT + j * 3]);
 					strikeSpeak(io);
 					SendIOScriptEvent(io, SM_STRIKE, "bare");
 					player.m_weaponBlocked = -1;
 					player.m_strikeDirection = 0;
-					player.m_aimTime = 0;
+					player.m_aimTime = ArxInstant_ZERO;
 				} else if(layer1.cur_anim == alist[ANIM_BARE_STRIKE_LEFT+j*3]) {
 					if(layer1.flags & EA_ANIMEND) {
 						changeAnimation(io, 1, alist[ANIM_BARE_WAIT], EA_LOOP);
 						player.m_strikeDirection = 0;
-						player.m_aimTime = arxtime.now_ul();
+						player.m_aimTime = arxtime.now();
 						player.m_weaponBlocked = -1;
 					} else if(layer1.ctime > layer1.cur_anim->anims[layer1.altidx_cur]->anim_time * 0.2f
 							&& layer1.ctime < layer1.cur_anim->anims[layer1.altidx_cur]->anim_time * 0.8f
@@ -778,7 +781,7 @@ void ManageCombatModeAnimations() {
 									player.m_weaponBlocked = layer1.ctime;
 								}
 								
-								ARX_PARTICLES_Spawn_Spark(sphere.origin, static_cast<unsigned int>(dmgs), SpawnSparkType_Success);
+								ParticleSparkSpawn(sphere.origin, static_cast<unsigned int>(dmgs), SpawnSparkType_Success);
 								
 								if(ValidIONum(num)) {
 									ARX_SOUND_PlayCollision(entities[num]->material, MATERIAL_FLESH, 1.f, 1.f, sphere.origin, NULL);
@@ -793,7 +796,7 @@ void ManageCombatModeAnimations() {
 		case WEAPON_DAGGER: { // DAGGER PLAYER MANAGEMENT
 			// Waiting and receiving Strike Impulse
 			if(layer1.cur_anim == alist[ANIM_DAGGER_WAIT]) {
-				player.m_aimTime = 0;
+				player.m_aimTime = ArxInstant_ZERO;
 				if(eeMousePressed1()) {
 					changeAnimation(io, 1, alist[ANIM_DAGGER_STRIKE_LEFT_START + player.m_strikeDirection * 3]);
 					io->isHit = false;
@@ -804,13 +807,13 @@ void ManageCombatModeAnimations() {
 			for(long j = 0; j < 4; j++) {
 				if(layer1.cur_anim == alist[ANIM_DAGGER_STRIKE_LEFT_START+j*3] && (layer1.flags & EA_ANIMEND)) {
 					changeAnimation(io, 1, alist[ANIM_DAGGER_STRIKE_LEFT_CYCLE + j * 3], EA_LOOP);
-					player.m_aimTime = arxtime.now_ul();
+					player.m_aimTime = arxtime.now();
 				} else if(layer1.cur_anim == alist[ANIM_DAGGER_STRIKE_LEFT_CYCLE+j*3] && !eeMousePressed1()) {
 					changeAnimation(io, 1, alist[ANIM_DAGGER_STRIKE_LEFT + j * 3]);
 					strikeSpeak(io);
 					SendIOScriptEvent(io, SM_STRIKE, "dagger");
 					player.m_strikeDirection = 0;
-					player.m_aimTime = 0;
+					player.m_aimTime = ArxInstant_ZERO;
 				} else if(layer1.cur_anim == alist[ANIM_DAGGER_STRIKE_LEFT+j*3]) {
 					if(layer1.ctime > layer1.cur_anim->anims[layer1.altidx_cur]->anim_time * 0.3f
 						&& layer1.ctime < layer1.cur_anim->anims[layer1.altidx_cur]->anim_time * 0.7f)
@@ -828,7 +831,7 @@ void ManageCombatModeAnimations() {
 						changeAnimation(io, 1, alist[ANIM_DAGGER_WAIT], EA_LOOP);
 						layer1.flags &= ~(EA_PAUSED | EA_REVERSE);
 						player.m_strikeDirection = 0;
-						player.m_aimTime = arxtime.now_ul();
+						player.m_aimTime = arxtime.now();
 						player.m_weaponBlocked = -1;
 					}
 					
@@ -843,7 +846,7 @@ void ManageCombatModeAnimations() {
 		case WEAPON_1H: { // 1HANDED PLAYER MANAGEMENT
 			// Waiting and Received Strike Impulse
 			if(layer1.cur_anim == alist[ANIM_1H_WAIT]) {
-				player.m_aimTime = 0;
+				player.m_aimTime = ArxInstant_ZERO;
 				if(eeMousePressed1()) {
 					changeAnimation(io, 1, alist[ANIM_1H_STRIKE_LEFT_START + player.m_strikeDirection * 3]);
 					io->isHit = false;
@@ -854,13 +857,13 @@ void ManageCombatModeAnimations() {
 			for(long j = 0; j < 4; j++) {
 				if(layer1.cur_anim == alist[ANIM_1H_STRIKE_LEFT_START+j*3] && (layer1.flags & EA_ANIMEND)) {
 					changeAnimation(io, 1, alist[ANIM_1H_STRIKE_LEFT_CYCLE + j * 3], EA_LOOP);
-					player.m_aimTime = arxtime.now_ul();
+					player.m_aimTime = arxtime.now();
 				} else if(layer1.cur_anim == alist[ANIM_1H_STRIKE_LEFT_CYCLE+j*3] && !eeMousePressed1()) {
 					changeAnimation(io, 1, alist[ANIM_1H_STRIKE_LEFT + j * 3]);
 					strikeSpeak(io);
 					SendIOScriptEvent(io, SM_STRIKE, "1h");
 					player.m_strikeDirection = 0;
-					player.m_aimTime = 0;
+					player.m_aimTime = ArxInstant_ZERO;
 				} else if(layer1.cur_anim == alist[ANIM_1H_STRIKE_LEFT+j*3]) {
 					if(layer1.ctime > layer1.cur_anim->anims[layer1.altidx_cur]->anim_time * 0.3f
 						&& layer1.ctime < layer1.cur_anim->anims[layer1.altidx_cur]->anim_time * 0.7f)
@@ -878,7 +881,7 @@ void ManageCombatModeAnimations() {
 						changeAnimation(io, 1, alist[ANIM_1H_WAIT], EA_LOOP);
 						layer1.flags &= ~(EA_PAUSED | EA_REVERSE);
 						player.m_strikeDirection = 0;
-						player.m_aimTime = 0;
+						player.m_aimTime = ArxInstant_ZERO;
 						player.m_weaponBlocked = -1;
 					}
 					
@@ -893,7 +896,7 @@ void ManageCombatModeAnimations() {
 		case WEAPON_2H: { // 2HANDED PLAYER MANAGEMENT
 			// Waiting and Receiving Strike Impulse
 			if(layer1.cur_anim == alist[ANIM_2H_WAIT]) {
-				player.m_aimTime = 0;
+				player.m_aimTime = ArxInstant_ZERO;
 				if(eeMousePressed1()) {
 					changeAnimation(io, 1, alist[ANIM_2H_STRIKE_LEFT_START + player.m_strikeDirection * 3]);
 					io->isHit = false;
@@ -904,13 +907,13 @@ void ManageCombatModeAnimations() {
 			for(long j = 0; j < 4; j++) {
 				if(layer1.cur_anim == alist[ANIM_2H_STRIKE_LEFT_START+j*3] && (layer1.flags & EA_ANIMEND)) {
 					changeAnimation(io, 1, alist[ANIM_2H_STRIKE_LEFT_CYCLE + j * 3], EA_LOOP);
-					player.m_aimTime = arxtime.now_ul();
+					player.m_aimTime = arxtime.now();
 				} else if(layer1.cur_anim == alist[ANIM_2H_STRIKE_LEFT_CYCLE+j*3] && !eeMousePressed1()) {
 					changeAnimation(io, 1, alist[ANIM_2H_STRIKE_LEFT + j * 3]);
 					strikeSpeak(io);
 					SendIOScriptEvent(io, SM_STRIKE, "2h");
 					player.m_strikeDirection = 0;
-					player.m_aimTime = 0;
+					player.m_aimTime = ArxInstant_ZERO;
 				} else if(layer1.cur_anim == alist[ANIM_2H_STRIKE_LEFT+j*3]) {
 					if(layer1.ctime > layer1.cur_anim->anims[layer1.altidx_cur]->anim_time * 0.3f
 						&& layer1.ctime < layer1.cur_anim->anims[layer1.altidx_cur]->anim_time * 0.7f)
@@ -928,7 +931,7 @@ void ManageCombatModeAnimations() {
 						changeAnimation(io, 1, alist[ANIM_2H_WAIT], EA_LOOP);
 						layer1.flags &= ~(EA_PAUSED | EA_REVERSE);
 						player.m_strikeDirection = 0;
-						player.m_aimTime = 0;
+						player.m_aimTime = ArxInstant_ZERO;
 						player.m_weaponBlocked = -1;
 					}
 					
@@ -953,7 +956,7 @@ void ManageCombatModeAnimations() {
 			
 			// Waiting and Receiving Strike Impulse
 			if(layer1.cur_anim == alist[ANIM_MISSILE_WAIT]) {
-				player.m_aimTime = arxtime.now_ul();
+				player.m_aimTime = arxtime.now();
 				
 				if(eeMousePressed1() && Player_Arrow_Count() > 0) {
 					changeAnimation(io, 1, alist[ANIM_MISSILE_STRIKE_PART_1]);
@@ -962,7 +965,7 @@ void ManageCombatModeAnimations() {
 			}
 			
 			if(layer1.cur_anim == alist[ANIM_MISSILE_STRIKE_PART_1] && (layer1.flags & EA_ANIMEND)) {
-				player.m_aimTime = 0;
+				player.m_aimTime = ArxInstant_ZERO;
 				changeAnimation(io, 1, alist[ANIM_MISSILE_STRIKE_PART_2]);
 				EERIE_LINKEDOBJ_LinkObjectToObject(io->obj, arrowobj, "left_attach", "attach", NULL);
 			}
@@ -970,7 +973,7 @@ void ManageCombatModeAnimations() {
 			// Now go for strike cycle...
 			if(layer1.cur_anim == alist[ANIM_MISSILE_STRIKE_PART_2] && (layer1.flags & EA_ANIMEND)) {
 				changeAnimation(io, 1, alist[ANIM_MISSILE_STRIKE_CYCLE], EA_LOOP);
-				player.m_aimTime = arxtime.now_ul();
+				player.m_aimTime = arxtime.now();
 			} else if(layer1.cur_anim == alist[ANIM_MISSILE_STRIKE_CYCLE] && !eeMousePressed1()) {
 				EERIE_LINKEDOBJ_UnLinkObjectFromObject(io->obj, arrowobj);
 				changeAnimation(io, 1, alist[ANIM_MISSILE_STRIKE]);
@@ -1031,7 +1034,7 @@ void ManageCombatModeAnimations() {
 					PlayerLaunchArrow_Test(aimratio, poisonous, pos, angle);
 				}
 				
-				player.m_aimTime = 0;
+				player.m_aimTime = ArxInstant_ZERO;
 			} else if(layer1.cur_anim == alist[ANIM_MISSILE_STRIKE]) {
 				player.m_bowAimRatio -= bowZoomFromDuration(Original_framedelay);
 				
@@ -1041,7 +1044,7 @@ void ManageCombatModeAnimations() {
 				if(layer1.flags & EA_ANIMEND) {
 					player.m_bowAimRatio = 0;
 					changeAnimation(io, 1, alist[ANIM_MISSILE_WAIT], EA_LOOP);
-					player.m_aimTime = 0;
+					player.m_aimTime = ArxInstant_ZERO;
 					player.m_weaponBlocked = -1;
 					EERIE_LINKEDOBJ_UnLinkObjectFromObject(io->obj, arrowobj);
 				}
@@ -1073,7 +1076,7 @@ void ManageCombatModeAnimationsEND() {
 			||	(layer1.cur_anim == alist[ANIM_MISSILE_READY_PART_1])
 			||	(layer1.cur_anim == alist[ANIM_MISSILE_READY_PART_2])	)
 	) {
-		player.m_aimTime = arxtime.now_ul();
+		player.m_aimTime = arxtime.now();
 	}
 
 	if(layer1.flags & EA_ANIMEND) {
@@ -1100,7 +1103,7 @@ void ManageCombatModeAnimationsEND() {
 					} else {
 						changeAnimation(io, 1, alist[ANIM_BARE_STRIKE_LEFT_START + player.m_strikeDirection * 3]);
 					}
-					player.m_aimTime = arxtime.now_ul();
+					player.m_aimTime = arxtime.now();
 					io->isHit = false;
 				}
 				break;
@@ -1118,7 +1121,7 @@ void ManageCombatModeAnimationsEND() {
 						} else {
 							changeAnimation(io, 1, alist[ANIM_DAGGER_STRIKE_LEFT_START + player.m_strikeDirection * 3]);
 						}
-						player.m_aimTime = arxtime.now_ul();
+						player.m_aimTime = arxtime.now();
 						io->isHit = false;
 					} else if(layer1.cur_anim == alist[ANIM_DAGGER_UNREADY_PART_1]) {
 						ARX_EQUIPMENT_AttachPlayerWeaponToBack();
@@ -1141,7 +1144,7 @@ void ManageCombatModeAnimationsEND() {
 						} else {
 							changeAnimation(io, 1, alist[ANIM_1H_STRIKE_LEFT_START + player.m_strikeDirection * 3]);
 						}
-						player.m_aimTime = arxtime.now_ul();
+						player.m_aimTime = arxtime.now();
 						io->isHit = false;
 					} else if (layer1.cur_anim == alist[ANIM_1H_UNREADY_PART_1]) {
 						ARX_EQUIPMENT_AttachPlayerWeaponToBack();
@@ -1164,7 +1167,7 @@ void ManageCombatModeAnimationsEND() {
 						} else {
 							changeAnimation(io, 1, alist[ANIM_2H_STRIKE_LEFT_START + player.m_strikeDirection * 3]);
 						}
-						player.m_aimTime = arxtime.now_ul();
+						player.m_aimTime = arxtime.now();
 						io->isHit = false;
 					} else if(layer1.cur_anim == alist[ANIM_2H_UNREADY_PART_1]) {
 						ARX_EQUIPMENT_AttachPlayerWeaponToBack();

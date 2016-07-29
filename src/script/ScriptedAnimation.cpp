@@ -89,7 +89,7 @@ public:
 		io->angle.setPitch(io->angle.getPitch() + t2);
 		io->angle.setRoll(io->angle.getRoll() + t3);
 		
-		io->animBlend.lastanimtime = 0;
+		io->animBlend.lastanimtime = ArxInstant_ZERO;
 		
 		return Success;
 	}
@@ -279,22 +279,22 @@ public:
 			scr_timer[num2].es = context.getScript();
 			scr_timer[num2].exist = 1;
 			scr_timer[num2].io = context.getEntity();
-			scr_timer[num2].msecs = 1000.f;
+			scr_timer[num2].interval = ArxDurationMs(1000);
 			// Don't assume that we successfully set the animation - use the current animation
 			if(layer.cur_anim) {
 				arx_assert(layer.altidx_cur >= 0 && layer.altidx_cur < layer.cur_anim->alt_nb);
-				if(layer.cur_anim->anims[layer.altidx_cur]->anim_time > scr_timer[num2].msecs) {
-					scr_timer[num2].msecs = layer.cur_anim->anims[layer.altidx_cur]->anim_time;
+				if(layer.cur_anim->anims[layer.altidx_cur]->anim_time > scr_timer[num2].interval) {
+					scr_timer[num2].interval = layer.cur_anim->anims[layer.altidx_cur]->anim_time;
 				}
 			}
 			scr_timer[num2].name = timername;
 			scr_timer[num2].pos = pos;
-			scr_timer[num2].tim = arxtime.now_ul();
-			scr_timer[num2].times = 1;
+			scr_timer[num2].start = arxtime.now();
+			scr_timer[num2].count = 1;
 			scr_timer[num2].longinfo = 0;
 			
 			DebugScript(": scheduled timer #" << num2 << ' ' << timername << " in "
-			            << scr_timer[num2].msecs << "ms");
+			            << scr_timer[num2].interval << "ms");
 			
 		}
 		

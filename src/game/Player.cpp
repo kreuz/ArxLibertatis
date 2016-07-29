@@ -95,12 +95,13 @@ ZeniMax Media Inc., Suite 120, Rockville, Maryland 20850 USA.
 #include "graphics/Renderer.h"
 #include "graphics/Vertex.h"
 #include "graphics/data/TextureContainer.h"
-#include "graphics/effects/DrawEffects.h"
+#include "graphics/effects/PolyBoom.h"
 #include "graphics/effects/Fade.h"
 #include "graphics/effects/Fog.h"
 #include "graphics/particle/ParticleManager.h"
 #include "graphics/particle/ParticleEffects.h"
 #include "graphics/particle/MagicFlare.h"
+#include "graphics/particle/Spark.h"
 
 #include "io/resource/ResourcePath.h"
 #include "io/resource/PakReader.h"
@@ -155,7 +156,7 @@ bool USE_PLAYERCOLLISIONS = true;
 bool BLOCK_PLAYER_CONTROLS = false;
 bool WILLRETURNTOCOMBATMODE = false;
 long DeadTime = 0;
-static ArxInstant LastHungerSample = 0;
+static ArxInstant LastHungerSample = ArxInstant_ZERO;
 static unsigned long ROTATE_START = 0;
 
 // Player Anims FLAGS/Vars
@@ -1073,9 +1074,9 @@ void ARX_PLAYER_FrameCheck(float Framedelay)
 
 			// Check for player hungry sample playing
 			if((player.hunger > 10.f && player.hunger - inc_hunger <= 10.f)
-					|| (player.hunger < 10.f && arxtime.now_f() > LastHungerSample + 180000))
+					|| (player.hunger < 10.f && arxtime.now() > LastHungerSample + ArxDurationMs(180000)))
 			{
-				LastHungerSample = arxtime.now_ul();
+				LastHungerSample = arxtime.now();
 
 				if(!BLOCK_PLAYER_CONTROLS) {
 					bool bOk = true;
@@ -1321,7 +1322,7 @@ void ARX_PLAYER_Manage_Visual() {
 	
 	ARX_PROFILE_FUNC();
 	
-	ArxInstant now = arxtime.now_ul();
+	ArxInstant now = arxtime.now();
 	
 	if(player.m_currentMovement & PLAYER_ROTATE) {
 		if(ROTATE_START == 0) {
@@ -1666,7 +1667,7 @@ retry:
 				FALLING_TIME = 0;
 				player.jumpphase = JumpAscending;
 				request0_anim = alist[ANIM_JUMP_UP];
-				player.jumpstarttime = arxtime.now_ul();
+				player.jumpstarttime = arxtime.now();
 				player.jumplastposition = -1.f;
 				break;
 			}
@@ -1680,7 +1681,7 @@ retry:
 				break;
 			}
 			case JumpDescending: { // Post-synch
-				LAST_JUMP_ENDTIME = arxtime.now_ul();
+				LAST_JUMP_ENDTIME = arxtime.now();
 				if((layer0.cur_anim == alist[ANIM_JUMP_END] && (layer0.flags & EA_ANIMEND))
 				   || player.onfirmground) {
 					player.jumpphase = JumpEnd;
@@ -1691,7 +1692,7 @@ retry:
 				break;
 			}
 			case JumpEnd: { // Post-synch
-				LAST_JUMP_ENDTIME = arxtime.now_ul();
+				LAST_JUMP_ENDTIME = arxtime.now();
 				if(layer0.cur_anim == alist[ANIM_JUMP_END_PART2] && (layer0.flags & EA_ANIMEND)) {
 					AcquireLastAnim(io);
 					player.jumpphase = NotJumping;
@@ -1912,10 +1913,10 @@ extern float MAX_ALLOWED_PER_SECOND;
 static long LAST_FIRM_GROUND = 1;
 static long TRUE_FIRM_GROUND = 1;
 float lastposy = -9999999.f;
-ArxInstant REQUEST_JUMP = 0;
+ArxInstant REQUEST_JUMP = ArxInstant_ZERO;
 extern float Original_framedelay;
 
-ArxInstant LAST_JUMP_ENDTIME = 0;
+ArxInstant LAST_JUMP_ENDTIME = ArxInstant_ZERO;
 
 static bool Valid_Jump_Pos() {
 	
@@ -2004,7 +2005,7 @@ void ARX_PLAYER_Manage_Movement() {
 void PlayerMovementIterate(float DeltaTime) {
 	
 	// A jump is requested so let's go !
-	if(REQUEST_JUMP) {
+	if(REQUEST_JUMP != ArxInstant_ZERO) {
 		if((player.m_currentMovement & PLAYER_CROUCH)
 		   || player.physics.cyl.height > player.baseHeight()) {
 			float old = player.physics.cyl.height;
@@ -2015,7 +2016,7 @@ void PlayerMovementIterate(float DeltaTime) {
 			if(anything < 0.f) {
 				player.m_currentMovement |= PLAYER_CROUCH;
 				player.physics.cyl.height = old;
-				REQUEST_JUMP = 0;
+				REQUEST_JUMP = ArxInstant_ZERO;
 			} else {
 				bGCroucheToggle = false;
 				player.m_currentMovement &= ~PLAYER_CROUCH;
@@ -2024,13 +2025,13 @@ void PlayerMovementIterate(float DeltaTime) {
 		}
 		
 		if(!Valid_Jump_Pos()) {
-			REQUEST_JUMP = 0;
+			REQUEST_JUMP = ArxInstant_ZERO;
 		}
 		
-		if(REQUEST_JUMP) {
-			float t = arxtime.now_f() - REQUEST_JUMP;
-			if(t >= 0.f && t <= 350.f) {
-				REQUEST_JUMP = 0;
+		if(REQUEST_JUMP != ArxInstant_ZERO) {
+			ArxDuration t = arxtime.now() - REQUEST_JUMP;
+			if(t >= ArxDuration_ZERO && t <= ArxDurationMs(350)) {
+				REQUEST_JUMP = ArxInstant_ZERO;
 				ARX_NPC_SpawnAudibleSound(player.pos, entities.player());
 				ARX_SPEECH_Launch_No_Unicode_Seek("player_jump", entities.player());
 				player.onfirmground = false;
@@ -2168,10 +2169,10 @@ void PlayerMovementIterate(float DeltaTime) {
 		// Apply player impulse force
 		
 		float jump_mul = 1.f;
-		if(arxtime.now_f() - LAST_JUMP_ENDTIME < 600) {
+		if(arxtime.now() - LAST_JUMP_ENDTIME < ArxDurationMs(600)) {
 			jump_mul = 0.5f;
-			if(arxtime.now_f() - LAST_JUMP_ENDTIME >= 300) {
-				jump_mul += (float)(LAST_JUMP_ENDTIME + 300 - arxtime.now_f()) * (1.f / 300);
+			if(arxtime.now() - LAST_JUMP_ENDTIME >= ArxDurationMs(300)) {
+				jump_mul += (float)(LAST_JUMP_ENDTIME + ArxDurationMs(300) - arxtime.now()) * (1.f / 300);
 				if(jump_mul > 1.f) {
 					jump_mul = 1.f;
 				}
@@ -2331,12 +2332,12 @@ void PlayerMovementIterate(float DeltaTime) {
 				
 				if(player.jumplastposition == -1.f) {
 					player.jumplastposition = 0;
-					player.jumpstarttime = arxtime.now_ul();
+					player.jumpstarttime = arxtime.now();
 				}
 				
 				const float jump_up_time = 200.f;
 				const float jump_up_height = 130.f;
-				const ArxInstant now = arxtime.now_ul();
+				const ArxInstant now = arxtime.now();
 				const unsigned long elapsed = now - player.jumpstarttime;
 				float position = glm::clamp(float(elapsed) / jump_up_time, 0.f, 1.f);
 				
@@ -2625,7 +2626,6 @@ void ARX_PLAYER_Invulnerability(long flag) {
 }
 
 extern Entity * FlyingOverIO;
-extern Vec3f LastValidPlayerPos;
 
 void ARX_GAME_Reset(long type) {
 	arx_assert(entities.player());
@@ -2636,7 +2636,7 @@ void ARX_GAME_Reset(long type) {
 	
 	entities.player()->speed_modif = 0;
 	
-	LAST_JUMP_ENDTIME = 0;
+	LAST_JUMP_ENDTIME = ArxInstant_ZERO;
 	FlyingOverIO = NULL;
 	g_miniMap.mapMarkerInit();
 	ClearDynLights();
@@ -2674,7 +2674,7 @@ void ARX_GAME_Reset(long type) {
 	ARX_INTERACTIVE_ClearAllDynData();
 
 	// PolyBooms
-	ARX_BOOMS_ClearAllPolyBooms();
+	PolyBoomClear();
 
 	// Magical Flares
 	ARX_MAGICAL_FLARES_KillAll();
@@ -2716,6 +2716,7 @@ void ARX_GAME_Reset(long type) {
 
 	// Particles
 	ARX_PARTICLES_ClearAll();
+	ParticleSparkClear();
 	if(pParticleManager)
 		pParticleManager->Clear();
 
@@ -2778,7 +2779,7 @@ void ARX_GAME_Reset(long type) {
 	HERO_SHOW_1ST = -1;
 	PUSH_PLAYER_FORCE = Vec3f_ZERO;
 	player.jumplastposition = 0;
-	player.jumpstarttime = 0;
+	player.jumpstarttime = ArxInstant_ZERO;
 	player.jumpphase = NotJumping;
 	player.inzone = NULL;
 
@@ -2789,7 +2790,7 @@ void ARX_GAME_Reset(long type) {
 		eyeball.exist = -100;
 	}
 	
-	entities.player()->ouch_time = 0;
+	entities.player()->ouch_time = ArxInstant_ZERO;
 	entities.player()->invisibility = 0.f;
 	
 	fadeReset();

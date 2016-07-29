@@ -117,7 +117,7 @@ void ARX_FOGS_Render() {
 				break;
 			}
 			
-			pd->special = FADE_IN_AND_OUT | ROTATING | MODULATE_ROTATION | DISSIPATING;
+			pd->m_flags = FADE_IN_AND_OUT | ROTATING | DISSIPATING;
 			if(fog.special & FOG_DIRECTIONAL) {
 				pd->ov = fog.pos;
 				pd->move = fog.move * (fog.speed * 0.1f);
@@ -131,7 +131,7 @@ void ARX_FOGS_Render() {
 			pd->tc = TC_smoke;
 			pd->siz = (fog.size + Random::getf(0.f, 2.f) * fog.size) * (1.0f / 3);
 			pd->rgb = fog.rgb;
-			pd->fparam = fog.rotatespeed;
+			pd->m_rotation = fog.rotatespeed;
 		}
 	}
 }

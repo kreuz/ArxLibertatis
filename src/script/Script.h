@@ -145,11 +145,11 @@ struct SCR_TIMER {
 	std::string name;
 	short exist;
 	short flags;
-	long times;
-	ArxDuration msecs;
+	long count;
+	ArxDuration interval;
 	long pos;
 	long longinfo;
-	ArxInstant tim;
+	ArxInstant start;
 	Entity * io;
 	EERIE_SCRIPT * es;
 	
@@ -157,11 +157,11 @@ struct SCR_TIMER {
 		: name()
 		, exist(0)
 		, flags(0)
-		, times(0)
-		, msecs(0)
+		, count(0)
+		, interval(ArxDuration_ZERO)
 		, pos(0)
 		, longinfo(0)
-		, tim(0)
+		, start(ArxInstant_ZERO)
 		, io(NULL)
 		, es(NULL)
 	{ }
@@ -170,11 +170,11 @@ struct SCR_TIMER {
 		name.clear();
 		exist = 0;
 		flags = 0;
-		times = 0;
-		msecs = 0;
+		count = 0;
+		interval = ArxDuration_ZERO;
 		pos = 0;
 		longinfo = 0;
-		tim = 0;
+		start = ArxInstant_ZERO;
 		io = NULL;
 		es = NULL;
 	}

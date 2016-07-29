@@ -73,6 +73,7 @@ ZeniMax Media Inc., Suite 120, Rockville, Maryland 20850 USA.
 #include "graphics/data/TextureContainer.h"
 #include "graphics/texture/TextureStage.h"
 #include "graphics/particle/ParticleEffects.h"
+#include "graphics/effects/PolyBoom.h"
 #include "graphics/effects/Halo.h"
 
 #include "math/Angle.h"
@@ -95,8 +96,7 @@ extern Color ulBKGColor;
 // TODO: Convert to a RenderBatch & make TextureContainer constructor private
 static TextureContainer TexSpecialColor("specialcolor_list", TextureContainer::NoInsert);
 
-static TexturedVertex * PushVertexInTable(TextureContainer * pTex,
-                                          TextureContainer::TransparencyType type) {
+static TexturedVertex * PushVertexInTable(ModelBatch * pTex, BatchBucket type) {
 	
 	if(pTex->count[type] + 3 > pTex->max[type]) {
 		pTex->max[type] += 20 * 3;
@@ -114,8 +114,10 @@ static TexturedVertex * PushVertexInTable(TextureContainer * pTex,
 }
 
 static void PopOneTriangleList(TextureContainer * _pTex, bool clear) {
-
-	if(!_pTex->count[TextureContainer::Opaque]) {
+	
+	ModelBatch & batch = _pTex->m_modelBatch;
+	
+	if(!batch.count[BatchBucket_Opaque]) {
 		return;
 	}
 
@@ -127,10 +129,10 @@ static void PopOneTriangleList(TextureContainer * _pTex, bool clear) {
 	}
 
 
-	EERIEDRAWPRIM(Renderer::TriangleList, _pTex->list[TextureContainer::Opaque], _pTex->count[TextureContainer::Opaque]);
+	EERIEDRAWPRIM(Renderer::TriangleList, batch.list[BatchBucket_Opaque], batch.count[BatchBucket_Opaque]);
 	
 	if(clear) {
-		_pTex->count[TextureContainer::Opaque] = 0;
+		batch.count[BatchBucket_Opaque] = 0;
 	}
 
 	if(_pTex->userflags & POLY_LATE_MIP) {
@@ -141,54 +143,56 @@ static void PopOneTriangleList(TextureContainer * _pTex, bool clear) {
 }
 
 static void PopOneTriangleListTransparency(TextureContainer *_pTex) {
-
-	if(!_pTex->count[TextureContainer::Blended]
-	   && !_pTex->count[TextureContainer::Additive]
-	   && !_pTex->count[TextureContainer::Subtractive]
-	   && !_pTex->count[TextureContainer::Multiplicative]) {
+	
+	ModelBatch & batch = _pTex->m_modelBatch;
+	
+	if(!batch.count[BatchBucket_Blended]
+	   && !batch.count[BatchBucket_Additive]
+	   && !batch.count[BatchBucket_Subtractive]
+	   && !batch.count[BatchBucket_Multiplicative]) {
 		return;
 	}
 
 	GRenderer->SetTexture(0, _pTex);
 
-	if(_pTex->count[TextureContainer::Blended]) {
+	if(batch.count[BatchBucket_Blended]) {
 		GRenderer->SetBlendFunc(BlendDstColor, BlendSrcColor);
-		if(_pTex->count[TextureContainer::Blended]) {
-			EERIEDRAWPRIM(Renderer::TriangleList, _pTex->list[TextureContainer::Blended],
-						  _pTex->count[TextureContainer::Blended]);
-			_pTex->count[TextureContainer::Blended]=0;
+		if(batch.count[BatchBucket_Blended]) {
+			EERIEDRAWPRIM(Renderer::TriangleList, batch.list[BatchBucket_Blended],
+						  batch.count[BatchBucket_Blended]);
+			batch.count[BatchBucket_Blended]=0;
 		}
 	}
 
-	if(_pTex->count[TextureContainer::Additive]) {
+	if(batch.count[BatchBucket_Additive]) {
 		GRenderer->SetBlendFunc(BlendOne, BlendOne);
-		if(_pTex->count[TextureContainer::Additive]) {
-			EERIEDRAWPRIM(Renderer::TriangleList, _pTex->list[TextureContainer::Additive],
-						  _pTex->count[TextureContainer::Additive]);
-			_pTex->count[TextureContainer::Additive]=0;
+		if(batch.count[BatchBucket_Additive]) {
+			EERIEDRAWPRIM(Renderer::TriangleList, batch.list[BatchBucket_Additive],
+						  batch.count[BatchBucket_Additive]);
+			batch.count[BatchBucket_Additive]=0;
 		}
 	}
 
-	if(_pTex->count[TextureContainer::Subtractive]) {
+	if(batch.count[BatchBucket_Subtractive]) {
 		GRenderer->SetBlendFunc(BlendZero, BlendInvSrcColor);
-		if(_pTex->count[TextureContainer::Subtractive]) {
-			EERIEDRAWPRIM(Renderer::TriangleList, _pTex->list[TextureContainer::Subtractive],
-						  _pTex->count[TextureContainer::Subtractive]);
-			_pTex->count[TextureContainer::Subtractive]=0;
+		if(batch.count[BatchBucket_Subtractive]) {
+			EERIEDRAWPRIM(Renderer::TriangleList, batch.list[BatchBucket_Subtractive],
+						  batch.count[BatchBucket_Subtractive]);
+			batch.count[BatchBucket_Subtractive]=0;
 		}
 	}
 
-	if(_pTex->count[TextureContainer::Multiplicative]) {
+	if(batch.count[BatchBucket_Multiplicative]) {
 		GRenderer->SetBlendFunc(BlendOne, BlendOne);
-		if(_pTex->count[TextureContainer::Multiplicative]) {
-			EERIEDRAWPRIM(Renderer::TriangleList, _pTex->list[TextureContainer::Multiplicative],
-						  _pTex->count[TextureContainer::Multiplicative]);
-			_pTex->count[TextureContainer::Multiplicative] = 0;
+		if(batch.count[BatchBucket_Multiplicative]) {
+			EERIEDRAWPRIM(Renderer::TriangleList, batch.list[BatchBucket_Multiplicative],
+						  batch.count[BatchBucket_Multiplicative]);
+			batch.count[BatchBucket_Multiplicative] = 0;
 		}
 	}
 }
 
-void PopAllTriangleList(bool clear) {
+void PopAllTriangleListOpaque(bool clear) {
 	
 	ARX_PROFILE_FUNC();
 	
@@ -315,13 +319,12 @@ void Cedric_ApplyLightingFirstPartRefactor(Entity *io) {
 
 	if(io->sfx_flag & SFX_TYPE_YLSIDE_DEATH) {
 		if(io->show == SHOW_FLAG_TELEPORTING) {
-			float fTime = io->sfx_time + g_framedelay;
-			io->sfx_time = checked_range_cast<unsigned long>(fTime);
+			io->sfx_time = io->sfx_time + ArxDurationMs(g_framedelay);
 
-			if (io->sfx_time >= arxtime.now_ul())
-				io->sfx_time = arxtime.now_ul();
+			if (io->sfx_time >= arxtime.now())
+				io->sfx_time = arxtime.now();
 		} else {
-			const ArxDuration elapsed = arxtime.now_ul() - io->sfx_time;
+			const ArxDuration elapsed = arxtime.now() - io->sfx_time;
 
 			if(elapsed > 0) {
 				if(elapsed < 3000) { // 5 seconds to red
@@ -335,7 +338,7 @@ void Cedric_ApplyLightingFirstPartRefactor(Entity *io) {
 					io->highlightColor += Color3f(std::max(ratio - 0.5f, 0.f), 0.f, 0.f) * 255;
 					AddRandomSmoke(io, 2);
 				} else { // SFX finish
-					io->sfx_time = 0;
+					io->sfx_time = ArxInstant_ZERO;
 
 					if(io->ioflags & IO_NPC) {
 						MakePlayerAppearsFX(io);
@@ -346,7 +349,7 @@ void Cedric_ApplyLightingFirstPartRefactor(Entity *io) {
 						long count = 6;
 						while(count--) {
 							Sphere splatSphere = Sphere(sp.origin, Random::getf(30.f, 60.f));
-							SpawnGroundSplat(splatSphere, rgb, 1);
+							PolyBoomAddSplat(splatSphere, rgb, 1);
 							sp.origin.y -= Random::getf(0.f, 150.f);
 
 							ARX_PARTICLES_Spawn_Splat(sp.origin, 200.f, io->_npcdata->blood_color);
@@ -364,7 +367,7 @@ void Cedric_ApplyLightingFirstPartRefactor(Entity *io) {
 							light->fallstart = 400.f;
 							light->rgb = Color3f(1.0f, 0.8f, 0.f);
 							light->pos = io->pos + Vec3f(0.f, -80.f, 0.f);
-							light->duration = 600;
+							light->duration = ArxDurationMs(600);
 						}
 
 						if(io->sfx_flag & SFX_TYPE_INCINERATE) {
@@ -421,7 +424,7 @@ static void Cedric_PrepareHalo(EERIE_3DOBJ * eobj, Skeleton * obj) {
 	}
 }
 
-static TexturedVertex * GetNewVertexList(TextureContainer * container,
+static TexturedVertex * GetNewVertexList(ModelBatch * container,
                                          const EERIE_FACE & face, float invisibility,
                                          float & fTransp) {
 	
@@ -436,19 +439,19 @@ static TexturedVertex * GetNewVertexList(TextureContainer * container,
 		if(fTransp >= 2.f) { //MULTIPLICATIVE
 			fTransp *= (1.f / 2);
 			fTransp += 0.5f;
-			return PushVertexInTable(container, TextureContainer::Multiplicative);
+			return PushVertexInTable(container, BatchBucket_Multiplicative);
 		} else if(fTransp >= 1.f) { //ADDITIVE
 			fTransp -= 1.f;
-			return PushVertexInTable(container, TextureContainer::Additive);
+			return PushVertexInTable(container, BatchBucket_Additive);
 		} else if(fTransp > 0.f) { //NORMAL TRANS
 			fTransp = 1.f - fTransp;
-			return PushVertexInTable(container, TextureContainer::Blended);
+			return PushVertexInTable(container, BatchBucket_Blended);
 		} else { //SUBTRACTIVE
 			fTransp = 1.f - fTransp;
-			return PushVertexInTable(container, TextureContainer::Subtractive);
+			return PushVertexInTable(container, BatchBucket_Subtractive);
 		}
 	} else {
-		return PushVertexInTable(container, TextureContainer::Opaque);
+		return PushVertexInTable(container, BatchBucket_Opaque);
 	}
 }
 
@@ -765,7 +768,7 @@ void DrawEERIEInter_Render(EERIE_3DOBJ *eobj, const TransformInfo &t, Entity *io
 			continue;
 
 		float fTransp = 0.f;
-		TexturedVertex *tvList = GetNewVertexList(pTex, face, invisibility, fTransp);
+		TexturedVertex *tvList = GetNewVertexList(&pTex->m_modelBatch, face, invisibility, fTransp);
 
 		for(size_t n = 0; n < 3; n++) {
 
@@ -1129,8 +1132,8 @@ static void Cedric_RenderObject(EERIE_3DOBJ * eobj, Skeleton * obj, Entity * io,
 	bool glow = false;
 	ColorRGBA glowColor;
 	if(io && (io->sfx_flag & SFX_TYPE_YLSIDE_DEATH) && io->show != SHOW_FLAG_TELEPORTING) {
-		const ArxDuration elapsed = arxtime.now_ul() - io->sfx_time;
-		if(elapsed >= 3000 && elapsed < 6000) {
+		const ArxDuration elapsed = arxtime.now() - io->sfx_time;
+		if(elapsed >= ArxDurationMs(3000) && elapsed < ArxDurationMs(6000)) {
 			float ratio = (elapsed - 3000) * (1.0f / 3000);
 			glowColor = Color::gray(ratio).toRGB();
 			glow = true;
@@ -1155,7 +1158,7 @@ static void Cedric_RenderObject(EERIE_3DOBJ * eobj, Skeleton * obj, Entity * io,
 
 		float fTransp = 0.f;
 
-		TexturedVertex *tvList = GetNewVertexList(pTex, face, invisibility, fTransp);
+		TexturedVertex *tvList = GetNewVertexList(&pTex->m_modelBatch, face, invisibility, fTransp);
 
 		for(size_t n = 0; n < 3; n++) {
 			tvList[n].p     = eobj->vertexlist3[face.vid[n]].vert.p;
@@ -1174,7 +1177,7 @@ static void Cedric_RenderObject(EERIE_3DOBJ * eobj, Skeleton * obj, Entity * io,
 		}
 		
 		if(glow) {
-			TexturedVertex * tv2 = PushVertexInTable(&TexSpecialColor, TextureContainer::Opaque);
+			TexturedVertex * tv2 = PushVertexInTable(&TexSpecialColor.m_modelBatch, BatchBucket_Opaque);
 			std::copy(tvList, tvList + 3, tv2);
 			tv2[0].color = tv2[1].color = tv2[2].color = glowColor;
 		}

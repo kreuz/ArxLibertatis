@@ -84,7 +84,7 @@ void ARX_SPELLS_Init_Rects() {
 
 void ARX_SPELLS_UpdateSymbolDraw() {
 	
-	ArxInstant now = arxtime.now_ul();
+	ArxInstant now = arxtime.now();
 	
 	for(size_t i = 0; i < entities.size(); i++) {
 		const EntityHandle handle = EntityHandle(i);
@@ -172,7 +172,7 @@ void ARX_SPELLS_UpdateSymbolDraw() {
 			long elapsed = now - sd->starttime;
 
 			if(elapsed > sd->duration) {
-				endLightDelayed(io->dynlight, 600);
+				endLightDelayed(io->dynlight, ArxDurationMs(600));
 				io->dynlight = LightHandle();
 				
 				delete io->symboldraw;
@@ -305,7 +305,7 @@ static void ARX_SPELLS_RequestSymbolDrawCommon(Entity * io, float duration,
 	sd->duration = (short)std::max(1l, long(duration));
 	sd->sequence = info.sequence;
 
-	sd->starttime = arxtime.now_ul();
+	sd->starttime = arxtime.now();
 	sd->lastElapsed = 0;
 	
 	float tmpAngle = io->angle.getPitch() - 45.0F + info.startOffset.x * 2;

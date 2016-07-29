@@ -47,11 +47,16 @@ ZeniMax Media Inc., Suite 120, Rockville, Maryland 20850 USA.
 #ifndef ARX_GRAPHICS_EFFECTS_DRAWEFFECTS_H
 #define ARX_GRAPHICS_EFFECTS_DRAWEFFECTS_H
 
+#include "graphics/BaseGraphicsTypes.h"
+#include "graphics/Color.h"
 #include "math/Types.h"
 
-size_t PolyBoom_count();
-void ARX_BOOMS_ClearAllPolyBooms();
-void ARX_BOOMS_Add(const Vec3f & pos);
-void ARXDRAW_DrawPolyBoom();
+void PolyBoomClear();
+size_t PolyBoomCount();
+
+void PolyBoomAddScorch(const Vec3f & pos);
+void PolyBoomAddSplat(const Sphere & sp, const Color3f & col, long flags);
+
+void PolyBoomDraw();
 
 #endif // ARX_GRAPHICS_EFFECTS_DRAWEFFECTS_H

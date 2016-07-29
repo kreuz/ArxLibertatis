@@ -114,8 +114,8 @@ DamageHandle DamageCreate(const DamageParameters & params) {
 		if(!damages[i].exist) {
 			DAMAGE_INFO & damage = damages[i];
 			damage.params = params;
-			damage.start_time = arxtime.now_ul();
-			damage.lastupd = 0;
+			damage.start_time = arxtime.now();
+			damage.lastupd = ArxInstant_ZERO;
 			damage.exist = true;
 			return DamageHandle(i);
 		}
@@ -231,8 +231,8 @@ float ARX_DAMAGES_DamagePlayer(float dmg, DamageType type, EntityHandle source) 
 
 	entities.player()->dmg_sum += dmg;
 	
-	float elapsed = arxtime.now_f() - entities.player()->ouch_time;
-	if(elapsed > 500) {
+	ArxDuration elapsed = arxtime.now() - entities.player()->ouch_time;
+	if(elapsed > ArxDurationMs(500)) {
 		Entity * oes = EVENT_SENDER;
 
 		if(ValidIONum(source))
@@ -240,7 +240,7 @@ float ARX_DAMAGES_DamagePlayer(float dmg, DamageType type, EntityHandle source) 
 		else
 			EVENT_SENDER = NULL;
 
-		entities.player()->ouch_time = arxtime.now_ul();
+		entities.player()->ouch_time = arxtime.now();
 		char tex[32];
 		sprintf(tex, "%5.2f", double(entities.player()->dmg_sum));
 		SendIOScriptEvent( entities.player(), SM_OUCH, tex );
@@ -451,9 +451,9 @@ void ARX_DAMAGES_DamageFIX(Entity * io, float dmg, EntityHandle source, bool isS
 	else
 		EVENT_SENDER = NULL;
 
-	float elapsed = arxtime.now_f() - io->ouch_time;
-	if(elapsed > 500) {
-		io->ouch_time = arxtime.now_ul();
+	ArxDuration elapsed = arxtime.now() - io->ouch_time;
+	if(elapsed > ArxDurationMs(500)) {
+		io->ouch_time = arxtime.now();
 		char tex[32];
 		sprintf(tex, "%5.2f", double(io->dmg_sum));
 		SendIOScriptEvent(io, SM_OUCH, tex);
@@ -552,7 +552,7 @@ void ARX_DAMAGES_ForceDeath(Entity * io_dead, Entity * io_killer) {
 
 	if(fartherThan(io_dead->pos, ACTIVECAM->orgTrans.pos, 3200.f)) {
 		io_dead->animlayer[0].ctime = 9999999;
-		io_dead->animBlend.lastanimtime = 0;
+		io_dead->animBlend.lastanimtime = ArxInstant_ZERO;
 	}
 
 	std::string killer;
@@ -676,11 +676,6 @@ void ARX_DAMAGES_DealDamages(EntityHandle target, float dmg, EntityHandle source
 		if(flags & DAMAGE_TYPE_PUSH)
 			ARX_DAMAGES_PushIO(io_target, source, damagesdone * ( 1.0f / 2 ));
 		
-		// TODO what is this code supposed to do ?
-		if((flags & DAMAGE_TYPE_MAGICAL) && !(flags & (DAMAGE_TYPE_FIRE | DAMAGE_TYPE_COLD))) {
-			damagesdone -= player.m_miscFull.resistMagic * ( 1.0f / 100 ) * damagesdone;
-			damagesdone = std::max(0.0f, damagesdone);
-		}
 	} else {
 		if(io_target->ioflags & IO_NPC) {
 			if(flags & DAMAGE_TYPE_POISON) {
@@ -714,11 +709,6 @@ void ARX_DAMAGES_DealDamages(EntityHandle target, float dmg, EntityHandle source
 			if(flags & DAMAGE_TYPE_PUSH)
 				ARX_DAMAGES_PushIO(io_target, source, damagesdone * ( 1.0f / 2 ));
 			
-			// TODO what is this code supposed to do ?
-			if((flags & DAMAGE_TYPE_MAGICAL) && !(flags & (DAMAGE_TYPE_FIRE | DAMAGE_TYPE_COLD))) {
-				damagesdone -= io_target->_npcdata->resist_magic * ( 1.0f / 100 ) * damagesdone;
-				damagesdone = std::max(0.0f, damagesdone);
-			}
 		}
 	}
 }
@@ -751,14 +741,14 @@ float ARX_DAMAGES_DamageNPC(Entity * io, float dmg, EntityHandle source, bool is
 
 	io->dmg_sum += dmg;
 	
-	float elapsed = arxtime.now_f() - io->ouch_time;
-	if(elapsed > 500) {
+	ArxDuration elapsed = arxtime.now() - io->ouch_time;
+	if(elapsed > ArxDurationMs(500)) {
 		if(ValidIONum(source))
 			EVENT_SENDER = entities[source];
 		else
 			EVENT_SENDER = NULL;
 
-		io->ouch_time = arxtime.now_ul();
+		io->ouch_time = arxtime.now();
 		char tex[32];
 
 		if(EVENT_SENDER && EVENT_SENDER->summoner == PlayerEntityHandle) {
@@ -908,7 +898,7 @@ static void ARX_DAMAGES_AddVisual(DAMAGE_INFO & di, const Vec3f & pos, float dmg
 		num = Random::get(0, io->obj->vertexlist.size() / 4 - 1) * 4 + 1;
 	}
 	
-	ArxInstant now = arxtime.now_ul();
+	ArxInstant now = arxtime.now();
 	if(di.lastupd + 200 < now) {
 		di.lastupd = now;
 		if(di.params.type & DAMAGE_TYPE_MAGICAL) {
@@ -933,7 +923,7 @@ static void ARX_DAMAGES_AddVisual(DAMAGE_INFO & di, const Vec3f & pos, float dmg
 		}
 		pd->siz = glm::clamp(dmg, 5.f, 15.f);
 		pd->scale = Vec3f(-10.f);
-		pd->special = ROTATING | MODULATE_ROTATION | FIRE_TO_SMOKE;
+		pd->m_flags = ROTATING | FIRE_TO_SMOKE;
 		pd->tolive = Random::getu(500, 900);
 		pd->move = Vec3f(1.f, 2.f, 1.f) - randomVec3f() * Vec3f(2.f, 16.f, 2.f);
 		if(di.params.type & DAMAGE_TYPE_MAGICAL) {
@@ -942,14 +932,14 @@ static void ARX_DAMAGES_AddVisual(DAMAGE_INFO & di, const Vec3f & pos, float dmg
 			pd->rgb = Color3f::gray(0.5f);
 		}
 		pd->tc = TC_fire2;
-		pd->fparam = Random::getf(-0.1f, 0.1f);
+		pd->m_rotation = Random::getf(-0.1f, 0.1f);
 	}
 }
 
 // source = -1 no source but valid pos
 // source = 0  player
 // source > 0  IO
-static void ARX_DAMAGES_UpdateDamage(DamageHandle j, float now) {
+static void ARX_DAMAGES_UpdateDamage(DamageHandle j, ArxInstant now) {
 	
 	ARX_PROFILE_FUNC();
 	
@@ -970,7 +960,7 @@ static void ARX_DAMAGES_UpdateDamage(DamageHandle j, float now) {
 	float dmg;
 	if(damage.params.flags & DAMAGE_NOT_FRAME_DEPENDANT) {
 		dmg = damage.params.damages;
-	} else if(damage.params.duration == -1) {
+	} else if(damage.params.duration == ArxDuration(-1)) {
 		dmg = damage.params.damages;
 	} else {
 		float FD = g_framedelay;
@@ -1014,10 +1004,10 @@ static void ARX_DAMAGES_UpdateDamage(DamageHandle j, float now) {
 					float dist = fdist(damage.params.pos, sub);
 					
 					if(damage.params.type & DAMAGE_TYPE_FIELD) {
-						float elapsed = arxtime.now_f() - io->collide_door_time;
-						if(elapsed > 500) {
+						ArxDuration elapsed = arxtime.now() - io->collide_door_time;
+						if(elapsed > ArxDurationMs(500)) {
 							EVENT_SENDER = NULL;
-							io->collide_door_time = arxtime.now_ul(); 
+							io->collide_door_time = arxtime.now();
 							char param[64];
 							param[0] = 0;
 							
@@ -1160,7 +1150,7 @@ static void ARX_DAMAGES_UpdateDamage(DamageHandle j, float now) {
 		}
 	}
 	
-	if(damage.params.duration == -1)
+	if(damage.params.duration == ArxDuration(-1))
 		damage.exist = false;
 	else if(now > damage.start_time + damage.params.duration)
 		damage.exist = false;
@@ -1171,7 +1161,7 @@ void ARX_DAMAGES_UpdateAll() {
 	ARX_PROFILE_FUNC();
 	
 	for (size_t j = 0; j < MAX_DAMAGES; j++)
-		ARX_DAMAGES_UpdateDamage(DamageHandle(j), arxtime.now_f());
+		ARX_DAMAGES_UpdateDamage(DamageHandle(j), arxtime.now());
 }
 
 static bool SphereInIO(Entity * io, const Sphere & sphere) {

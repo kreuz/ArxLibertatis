@@ -64,10 +64,10 @@ public:
 	void pause();
 	void resume();
 	
-	void force_time_restore(const ArxInstant time);
+	void force_time_restore(ArxInstant time);
 	
 	// TODO probably the source of the need to clip frame_delay
-	void force_frame_time_restore(const unsigned long v) {
+	void force_frame_time_restore(const ArxInstant v) {
 		frame_time_us = v * 1000;
 		last_frame_time_us = v * 1000;
 	}
@@ -76,11 +76,11 @@ public:
 		return m_now_us / 1000.0f;
 	}
 	
-	ArxInstant now_ul() const {
+	ArxInstant now() const {
 		return checked_range_cast<ArxInstant>(m_now_us / 1000);
 	}
 	
-	void update(const bool & use_pause = true) {
+	void update(bool use_pause = true) {
 		if (is_paused() && use_pause) {
 			m_now_us = platform::getElapsedUs(start_time, pause_time);
 		} else {
@@ -93,16 +93,12 @@ public:
 	}
 	
 	// used only for "slow time" spell
-	void increment_start_time(const u64 & inc) {
+	void increment_start_time(u64 inc) {
 		start_time += inc;
 	}
 	
 	float get_frame_time() const { 
 		return frame_time_us / 1000.0f; 
-	}
-	
-	float get_last_frame_time() const {
-		return last_frame_time_us / 1000.0f;
 	}
 	
 	float get_frame_delay() const {
