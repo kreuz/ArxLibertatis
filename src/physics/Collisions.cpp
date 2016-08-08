@@ -447,7 +447,7 @@ static bool CollidedFromBack(Entity * io,Entity * ioo) {
 	ep.v[2].p.z = -std::cos(ft) * 180.f;
 
 	{
-	float angle = 270.f - io->angle.getPitch();
+	float angle = 270.f - io->angle.getYaw();
 	ep.tv[1].p = VRotateY(ep.v[1].p, angle);
 	ep.tv[2].p = VRotateY(ep.v[2].p, angle);
 	}
@@ -1069,7 +1069,7 @@ bool CheckAnythingInSphere(const Sphere & sphere, EntityHandle source, CASFlags 
 		if((io->ioflags & IO_ITEM) && (flags & CAS_NO_ITEM_COL))
 			continue;
 
-		if(treatio[i].io->index() != PlayerEntityHandle && source != PlayerEntityHandle && validsource && HaveCommonGroup(io,entities[source]))
+		if(treatio[i].io->index() != EntityHandle_Player && source != EntityHandle_Player && validsource && HaveCommonGroup(io,entities[source]))
 			continue;
 
 		if(io->gameFlags & GFLAG_PLATFORM) {

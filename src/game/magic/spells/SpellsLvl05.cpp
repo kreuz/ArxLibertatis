@@ -31,6 +31,7 @@
 #include "game/NPC.h"
 #include "game/Player.h"
 #include "game/Spells.h"
+#include "game/effect/ParticleSystems.h"
 #include "graphics/effects/PolyBoom.h"
 #include "graphics/particle/Particle.h"
 #include "graphics/particle/ParticleEffects.h"
@@ -58,10 +59,8 @@ void RuneOfGuardingSpell::Launch()
 	
 	tex_p2 = TextureContainer::Load("graph/obj3d/textures/(fx)_tsu_blueting");
 	
-	m_light = GetFreeDynLight();
-	if(lightHandleIsValid(m_light)) {
-		EERIE_LIGHT * light = lightHandleGet(m_light);
-		
+	EERIE_LIGHT * light = dynLightCreate(m_light);
+	if(light) {
 		light->intensity = 0.7f + 2.3f;
 		light->fallend = 500.f;
 		light->fallstart = 400.f;
@@ -81,9 +80,8 @@ void RuneOfGuardingSpell::Update() {
 	
 	ulCurrentTime += g_framedelay;
 	
-	if(lightHandleIsValid(m_light)) {
-		EERIE_LIGHT * light = lightHandleGet(m_light);
-		
+	EERIE_LIGHT * light = lightHandleGet(m_light);
+	if(light) {
 		float fa = Random::getf(0.85f, 1.0f);
 		light->intensity = 0.7f + 2.3f * fa;
 		light->fallend = 350.f;
@@ -103,17 +101,17 @@ void RuneOfGuardingSpell::Update() {
 	Color3f stitecolor;
 	
 	float stiteangleb = float(ulCurrentTime) * 0.01f;
-	stiteangle.setYaw(0);
+	stiteangle.setPitch(0);
 	stiteangle.setRoll(0);
 	
-	stiteangle.setPitch(stiteangleb * 0.1f);
+	stiteangle.setYaw(stiteangleb * 0.1f);
 	stitecolor = Color3f(0.4f, 0.4f, 0.6f);
 	float scale = std::sin(ulCurrentTime * 0.015f);
 	Vec3f stitescale = Vec3f(1.f, -0.1f, 1.f);
 	
 	Draw3DObject(slight, stiteangle, pos, stitescale, stitecolor, mat);
 	
-	stiteangle.setPitch(stiteangleb);
+	stiteangle.setYaw(stiteangleb);
 	stitecolor = Color3f(0.6f, 0.f, 0.f);
 	stitescale = Vec3f(2.f) * (1.f + 0.01f * scale);
 	
@@ -169,8 +167,8 @@ void LevitateSpell::Launch()
 {
 	spells.endByCaster(m_caster, SPELL_LEVITATE);
 	
-	if(m_caster == PlayerEntityHandle) {
-		m_target = PlayerEntityHandle;
+	if(m_caster == EntityHandle_Player) {
+		m_target = EntityHandle_Player;
 	}
 	
 	ARX_SOUND_PlaySFX(SND_SPELL_LEVITATE_START, &entities[m_target]->pos);
@@ -180,7 +178,7 @@ void LevitateSpell::Launch()
 	m_fManaCostPerSecond = 1.f;
 	
 	Vec3f target;
-	if(m_target == PlayerEntityHandle) {
+	if(m_target == EntityHandle_Player) {
 		target = player.pos + Vec3f(0.f, 150.f, 0.f);
 		m_duration = ArxDurationMs(200000000);
 		player.levitate = true;
@@ -208,7 +206,7 @@ void LevitateSpell::End()
 	ARX_SOUND_PlaySFX(SND_SPELL_LEVITATE_END, &entities[m_target]->pos);
 	m_targets.clear();
 	
-	if(m_target == PlayerEntityHandle)
+	if(m_target == EntityHandle_Player)
 		player.levitate = false;
 }
 
@@ -218,7 +216,7 @@ void LevitateSpell::Update() {
 	
 	Vec3f target;
 
-	if(m_target == PlayerEntityHandle) {
+	if(m_target == EntityHandle_Player) {
 		target = player.pos + Vec3f(0.f, 150.f, 0.f);
 		player.levitate = true;
 	} else {
@@ -283,12 +281,12 @@ CurePoisonSpell::CurePoisonSpell()
 
 void CurePoisonSpell::Launch()
 {
-	if(m_caster == PlayerEntityHandle) {
-		m_target = PlayerEntityHandle;
+	if(m_caster == EntityHandle_Player) {
+		m_target = EntityHandle_Player;
 	}
 	
 	float cure = m_level * 10;
-	if(m_target == PlayerEntityHandle) {
+	if(m_target == EntityHandle_Player) {
 		player.poison -= std::min(player.poison, cure);
 		ARX_SOUND_PlaySFX(SND_SPELL_CURE_POISON);
 	} else if (ValidIONum(m_target)) {
@@ -301,40 +299,10 @@ void CurePoisonSpell::Launch()
 	
 	m_duration = ArxDurationMs(3500);
 	
-	{
-	ParticleParams cp;
-	cp.m_nbMax = 350;
-	cp.m_life = 800;
-	cp.m_lifeRandom = 2000;
-	cp.m_pos = Vec3f(100, 0, 100);
-	cp.m_direction = Vec3f(0.f, -1.f, 0.f);
-	cp.m_angle = glm::radians(5.f);
-	cp.m_speed = 120;
-	cp.m_speedRandom = 84;
-	cp.m_gravity = Vec3f(0, -10, 0);
-	cp.m_flash = 0;
-	cp.m_rotation = 1.0f / (101 - 80);
-
-	cp.m_startSegment.m_size = 8;//6;
-	cp.m_startSegment.m_sizeRandom = 8;
-	cp.m_startSegment.m_color = Color(20, 205, 20, 245).to<float>();
-	cp.m_startSegment.m_colorRandom = Color(50, 50, 50, 10).to<float>();
-
-	cp.m_endSegment.m_size = 6;
-	cp.m_endSegment.m_sizeRandom = 4;
-	cp.m_endSegment.m_color = Color(5, 20, 5, 0).to<float>();
-	cp.m_endSegment.m_colorRandom = Color(0, 40, 0, 0).to<float>();
-	cp.m_blendMode = RenderMaterial::Additive;
-	cp.m_texture.set("graph/particles/cure_poison", 0, 100); //5
-	cp.m_spawnFlags = PARTICLE_CIRCULAR | PARTICLE_BORDER;
-	m_particles.SetParams(cp);
-	}
+	m_particles.SetParams(g_particleParameters[ParticleParam_CurePoison]);
 	
-	m_light = GetFreeDynLight();
-
-	if(lightHandleIsValid(m_light)) {
-		EERIE_LIGHT * light = lightHandleGet(m_light);
-		
+	EERIE_LIGHT * light = dynLightCreate(m_light);
+	if(light) {
 		light->intensity = 1.5f;
 		light->fallstart = 200.f;
 		light->fallend   = 350.f;
@@ -356,7 +324,7 @@ void CurePoisonSpell::Update() {
 	
 	m_pos = entities[m_target]->pos;
 	
-	if(m_target == PlayerEntityHandle)
+	if(m_target == EntityHandle_Player)
 		m_pos.y += 200;
 	
 	long ff = m_duration - m_currentTime;
@@ -382,13 +350,9 @@ void CurePoisonSpell::Update() {
 
 	m_particles.SetPos(m_pos);
 	m_particles.Update(g_framedelay);
-
-	if(!lightHandleIsValid(m_light))
-		m_light = GetFreeDynLight();
-
-	if(lightHandleIsValid(m_light)) {
-		EERIE_LIGHT * light = lightHandleGet(m_light);
-		
+	
+	EERIE_LIGHT * light = dynLightCreate(m_light);
+	if(light) {
 		light->intensity = 2.3f;
 		light->fallstart = 200.f;
 		light->fallend   = 350.f;
@@ -413,12 +377,12 @@ void RepelUndeadSpell::Launch()
 {
 	spells.endByCaster(m_caster, SPELL_REPEL_UNDEAD);
 	
-	if(m_caster == PlayerEntityHandle) {
-		m_target = PlayerEntityHandle;
+	if(m_caster == EntityHandle_Player) {
+		m_target = EntityHandle_Player;
 	}
 	
 	ARX_SOUND_PlaySFX(SND_SPELL_REPEL_UNDEAD, &entities[m_target]->pos);
-	if(m_target == PlayerEntityHandle) {
+	if(m_target == EntityHandle_Player) {
 		m_snd_loop = ARX_SOUND_PlaySFX(SND_SPELL_REPEL_UNDEAD_LOOP, &entities[m_target]->pos, 1.f, ARX_SOUND_PLAY_LOOPED);
 	}
 	
@@ -442,10 +406,10 @@ void RepelUndeadSpell::Update() {
 	Vec3f pos = entities[m_target]->pos;
 	
 	float rot;
-	if(m_target == PlayerEntityHandle) {
-		rot = player.angle.getPitch();
+	if(m_target == EntityHandle_Player) {
+		rot = player.angle.getYaw();
 	} else {
-		rot = entities[m_target]->angle.getPitch();
+		rot = entities[m_target]->angle.getYaw();
 	}
 	
 	m_pos = pos;
@@ -457,8 +421,8 @@ void RepelUndeadSpell::Update() {
 	
 	Anglef  eObjAngle;
 
-	eObjAngle.setPitch(m_yaw);
-	eObjAngle.setYaw(0);
+	eObjAngle.setYaw(m_yaw);
+	eObjAngle.setPitch(0);
 	eObjAngle.setRoll(0);
 	
 	arxtime.update();
@@ -489,13 +453,8 @@ void RepelUndeadSpell::Update() {
 		pd->rgb = Color3f(.4f, .4f, .6f);
 	}
 	
-	if(!lightHandleIsValid(m_light)) {
-		m_light = GetFreeDynLight();
-	}
-	
-	if(lightHandleIsValid(m_light)) {
-		EERIE_LIGHT * light = lightHandleGet(m_light);
-		
+	EERIE_LIGHT * light = dynLightCreate(m_light);
+	if(light) {
 		light->intensity = 2.3f;
 		light->fallend = 350.f;
 		light->fallstart = 150.f;
@@ -505,7 +464,7 @@ void RepelUndeadSpell::Update() {
 		light->creationTime = arxtime.now();
 	}
 	
-	if (m_target == PlayerEntityHandle)
+	if (m_target == EntityHandle_Player)
 		ARX_SOUND_RefreshPosition(m_snd_loop, entities[m_target]->pos);
 }
 
@@ -538,9 +497,9 @@ void PoisonProjectileSpell::Launch()
 		m_hand_pos = actionPointPosition(caster->obj, group);
 	}
 	
-	if(m_caster == PlayerEntityHandle) {
+	if(m_caster == EntityHandle_Player) {
 
-		afBeta = player.angle.getPitch();
+		afBeta = player.angle.getYaw();
 
 		if(m_hand_group != ActionPoint()) {
 			srcPos = m_hand_pos;
@@ -548,7 +507,7 @@ void PoisonProjectileSpell::Launch()
 			srcPos = player.pos;
 		}
 	} else {
-		afBeta = entities[m_caster]->angle.getPitch();
+		afBeta = entities[m_caster]->angle.getYaw();
 
 		if(m_hand_group != ActionPoint()) {
 			srcPos = m_hand_pos;
@@ -578,12 +537,9 @@ void PoisonProjectileSpell::Launch()
 		ArxDuration lTime = m_duration + ArxDurationMs(Random::getu(0, 5000));
 		projectile->SetDuration(lTime);
 		lMax = std::max(lMax, lTime);
-
-		projectile->lLightId = GetFreeDynLight();
-
-		if(lightHandleIsValid(projectile->lLightId)) {
-			EERIE_LIGHT * light = lightHandleGet(projectile->lLightId);
-			
+		
+		EERIE_LIGHT * light = dynLightCreate(projectile->lLightId);
+		if(light) {
 			light->intensity		= 2.3f;
 			light->fallend		= 250.f;
 			light->fallstart		= 150.f;
@@ -622,9 +578,8 @@ void PoisonProjectileSpell::Update() {
 		
 		projectile->Render();
 		
-		if(lightHandleIsValid(projectile->lLightId)) {
-			EERIE_LIGHT * light = lightHandleGet(projectile->lLightId);
-			
+		EERIE_LIGHT * light = lightHandleGet(projectile->lLightId);
+		if(light) {
 			light->intensity	= 2.3f * projectile->lightIntensityFactor;
 			light->fallend	= 250.f;
 			light->fallstart	= 150.f;

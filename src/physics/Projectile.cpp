@@ -143,7 +143,7 @@ void ARX_THROWN_OBJECT_Throw(EntityHandle source, const Vec3f & position, const 
 	projectile.creation_time = arxtime.now();
 	projectile.flags |= ATO_EXIST | ATO_MOVING;
 	
-	if(source == PlayerEntityHandle
+	if(source == EntityHandle_Player
 	   && ValidIONum(player.equiped[EQUIP_SLOT_WEAPON])
 	) {
 		Entity * tio = entities[player.equiped[EQUIP_SLOT_WEAPON]];
@@ -179,7 +179,7 @@ static float ARX_THROWN_ComputeDamages(const Projectile & projectile, EntityHand
 	backstab = 1.f;
 	bool critical = false;
 
-	if(source == PlayerEntityHandle) {
+	if(source == EntityHandle_Player) {
 		attack = projectile.damages;
 
 		if(Random::getf(0.f, 100.f) <= float(player.m_attributeFull.dexterity - 9) * 2.f
@@ -206,7 +206,7 @@ static float ARX_THROWN_ComputeDamages(const Projectile & projectile, EntityHand
 
 	float absorb;
 
-	if(target == PlayerEntityHandle) {
+	if(target == EntityHandle_Player) {
 		ac = player.m_miscFull.armorClass;
 		absorb = player.m_skillFull.defense * .5f;
 	} else {
@@ -214,12 +214,10 @@ static float ARX_THROWN_ComputeDamages(const Projectile & projectile, EntityHand
 		absorb = io_target->_npcdata->absorb;
 	}
 
-	char wmat[64];
-
 	std::string _amat = "flesh";
 	const std::string * amat = &_amat;
 
-	strcpy(wmat, "dagger");
+	const char * wmat = "dagger";
 
 	if(!io_target->armormaterial.empty()) {
 		amat = &io_target->armormaterial;
@@ -322,14 +320,12 @@ static void CheckExp(const Projectile & projectile) {
 		spawnFireHitParticle(pos, 0);
 		PolyBoomAddScorch(pos);
 		LaunchFireballBoom(pos, 10);
-		DoSphericDamage(Sphere(pos, 50.f), 4.f * 2, DAMAGE_AREA, DAMAGE_TYPE_FIRE | DAMAGE_TYPE_MAGICAL, PlayerEntityHandle);
+		DoSphericDamage(Sphere(pos, 50.f), 4.f * 2, DAMAGE_AREA, DAMAGE_TYPE_FIRE | DAMAGE_TYPE_MAGICAL, EntityHandle_Player);
 		ARX_SOUND_PlaySFX(SND_SPELL_FIRE_HIT, &pos);
 		ARX_NPC_SpawnAudibleSound(pos, entities.player());
-		LightHandle id = GetFreeDynLight();
-
-		if(lightHandleIsValid(id) && g_framedelay > 0) {
-			EERIE_LIGHT * light = lightHandleGet(id);
-			
+		
+		EERIE_LIGHT * light = dynLightCreate();
+		if(light && g_framedelay > 0) {
 			light->intensity = 3.9f;
 			light->fallstart = 400.f;
 			light->fallend   = 440.f;
@@ -389,10 +385,8 @@ void ARX_THROWN_OBJECT_Manage(float time_offset)
 		if((projectile.flags & ATO_FIERY) && (projectile.flags & ATO_MOVING)
 		   && !(projectile.flags & ATO_UNDERWATER)) {
 
-			LightHandle id = GetFreeDynLight();
-			if(lightHandleIsValid(id) && g_framedelay > 0) {
-				EERIE_LIGHT * light = lightHandleGet(id);
-				
+			EERIE_LIGHT * light = dynLightCreate();
+			if(light && g_framedelay > 0) {
 				light->intensity = 1.f;
 				light->fallstart = 100.f;
 				light->fallend   = 240.f;
@@ -539,7 +533,7 @@ void ARX_THROWN_OBJECT_Manage(float time_offset)
 											pos = target->obj->vertexlist3[hitpoint].v;
 										}
 
-										if(projectile.source == PlayerEntityHandle) {
+										if(projectile.source == EntityHandle_Player) {
 											float damages = ARX_THROWN_ComputeDamages(projectile, projectile.source, sphereContent[jj]);
 
 											if(damages > 0.f) {

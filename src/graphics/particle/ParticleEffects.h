@@ -132,9 +132,6 @@ struct PARTICLE_DEF {
 
 //-----------------------------------------------------------------------------
 
-
-static const float FLARE_MUL = 2.f;
-
 extern TextureContainer * fire2;
 extern long NewSpell;
 
@@ -143,7 +140,7 @@ void RestoreAllLightsInitialStatus();
 void TreatBackgroundActions();
 
 void Add3DBoom(const Vec3f & position);
-void AddRandomSmoke(Entity * io, long amount = 1);
+void AddRandomSmoke(Entity * io, long amount);
 
 void ManageTorch();
 
@@ -159,7 +156,7 @@ void ARX_PARTICLES_Update(EERIE_CAMERA * cam);
 void ARX_PARTICLES_Spawn_Blood(const Vec3f & pos, float dmgs, EntityHandle source);
 void ARX_PARTICLES_Spawn_Blood2(const Vec3f & pos, float dmgs, Color col, Entity * io);
 void ARX_PARTICLES_Spawn_Lava_Burn(Vec3f pos, Entity * io = NULL);
-void ARX_PARTICLES_Add_Smoke(const Vec3f & pos, long flags, long amount, Color3f * rgb = NULL); // flag 1 = randomize pos
+void ARX_PARTICLES_Add_Smoke(const Vec3f & pos, long flags, long amount, const Color3f & rgb = Color3f(0.3f, 0.3f, 0.34f)); // flag 1 = randomize pos
 
 void ARX_PARTICLES_Spawn_Splat(const Vec3f & pos, float dmgs, Color col);
 void ARX_PARTICLES_SpawnWaterSplash(const Vec3f & pos);

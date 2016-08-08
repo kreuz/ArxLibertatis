@@ -64,16 +64,17 @@ struct EERIEPOLY;
 struct SMY_VERTEX;
 class Entity;
 
-const size_t MAX_LIGHTS = 1200;
-const size_t MAX_DYNLIGHTS = 500;
+const size_t g_staticLightsMax = 1200;
+const size_t g_dynamicLightsMax = 500;
 
-extern EERIE_LIGHT * PDL[MAX_DYNLIGHTS];
-extern EERIE_LIGHT * GLight[MAX_LIGHTS];
-extern EERIE_LIGHT DynLight[MAX_DYNLIGHTS];
-extern size_t TOTPDL;
-extern size_t TOTIOPDL;
+extern EERIE_LIGHT * g_culledDynamicLights[g_dynamicLightsMax];
+extern EERIE_LIGHT * g_staticLights[g_staticLightsMax];
+extern EERIE_LIGHT g_dynamicLights[g_dynamicLightsMax];
+extern size_t g_culledDynamicLightsCount;
 
-ARX_HANDLE_TYPEDEF(long, LightHandle, -1)
+void culledStaticLightsReset();
+
+typedef HandleType<struct LightHandleTag, long, -1> LightHandle;
 
 enum EERIE_TYPES_EXTRAS_MODE
 {
@@ -149,11 +150,15 @@ const LightHandle torchLightHandle = LightHandle(0);
 
 EERIE_LIGHT * lightHandleGet(LightHandle lightHandle);
 
-bool lightHandleIsValid(LightHandle num);
 LightHandle GetFreeDynLight();
+
+EERIE_LIGHT * dynLightCreate(LightHandle & handle);
+EERIE_LIGHT * dynLightCreate();
+
 void lightHandleDestroy(LightHandle & handle);
 void endLightDelayed(LightHandle & handle, ArxDuration delay);
 
+void resetDynLights();
 
 void ClearDynLights();
 void PrecalcDynamicLighting(long x0, long x1, long z0, long z1, const Vec3f & camPos, float camDepth);

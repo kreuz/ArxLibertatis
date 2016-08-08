@@ -27,6 +27,7 @@
 #include "game/NPC.h"
 #include "game/Player.h"
 #include "game/Spells.h"
+#include "game/effect/ParticleSystems.h"
 #include "graphics/RenderBatcher.h"
 #include "graphics/Renderer.h"
 #include "graphics/particle/Particle.h"
@@ -58,7 +59,7 @@ void HealSpell::Launch()
 	m_duration = (m_launchDuration > ArxDuration(-1)) ? m_launchDuration : ArxDurationMs(3500);
 	m_currentTime = 0;
 	
-	if(m_caster == PlayerEntityHandle) {
+	if(m_caster == EntityHandle_Player) {
 		m_pos = player.pos;
 	} else {
 		m_pos = entities[m_caster]->pos;
@@ -66,40 +67,10 @@ void HealSpell::Launch()
 	
 	m_particles.SetPos(m_pos);
 	
-	{
-	ParticleParams cp;
-	cp.m_nbMax = 350;
-	cp.m_life = 800;
-	cp.m_lifeRandom = 2000;
-	cp.m_pos = Vec3f(100, 200, 100);
-	cp.m_direction = Vec3f(0.f, -1.f, 0.f);
-	cp.m_angle = glm::radians(5.f);
-	cp.m_speed = 120;
-	cp.m_speedRandom = 84;
-	cp.m_gravity = Vec3f(0, -10, 0);
-	cp.m_flash = 0;
-	cp.m_rotation = 1.0f / (101 - 80);
-
-	cp.m_startSegment.m_size = 8;
-	cp.m_startSegment.m_sizeRandom = 8;
-	cp.m_startSegment.m_color = Color(205, 205, 255, 245).to<float>();
-	cp.m_startSegment.m_colorRandom = Color(50, 50, 0, 10).to<float>();
-
-	cp.m_endSegment.m_size = 6;
-	cp.m_endSegment.m_sizeRandom = 4;
-	cp.m_endSegment.m_color = Color(20, 20, 30, 0).to<float>();
-	cp.m_endSegment.m_colorRandom = Color(0, 0, 40, 0).to<float>();
+	m_particles.SetParams(g_particleParameters[ParticleParam_Heal]);
 	
-	cp.m_blendMode = RenderMaterial::Additive;
-	cp.m_texture.set("graph/particles/heal_0005", 0, 100);
-	cp.m_spawnFlags = PARTICLE_CIRCULAR | PARTICLE_BORDER;
-	m_particles.SetParams(cp);
-	}
-	
-	m_light = GetFreeDynLight();
-	if(lightHandleIsValid(m_light)) {
-		EERIE_LIGHT * light = lightHandleGet(m_light);
-		
+	EERIE_LIGHT * light = dynLightCreate(m_light);
+	if(light) {
 		light->intensity = 2.3f;
 		light->fallstart = 200.f;
 		light->fallend   = 350.f;
@@ -118,18 +89,14 @@ void HealSpell::Update() {
 	
 	m_currentTime += g_framedelay;
 	
-	if(m_caster == PlayerEntityHandle) {
+	if(m_caster == EntityHandle_Player) {
 		m_pos = player.pos;
 	} else if(ValidIONum(m_target)) {
 		m_pos = entities[m_target]->pos;
 	}
 	
-	if(!lightHandleIsValid(m_light))
-		m_light = GetFreeDynLight();
-	
-	if(lightHandleIsValid(m_light)) {
-		EERIE_LIGHT * light = lightHandleGet(m_light);
-		
+	EERIE_LIGHT * light = dynLightCreate(m_light);
+	if(light) {
 		light->intensity = 2.3f;
 		light->fallstart = 200.f;
 		light->fallend   = 350.f;
@@ -185,7 +152,7 @@ void HealSpell::Update() {
 			if(dist<300.f) {
 				float gain = Random::getf(0.8f, 2.4f) * m_level * (300.f - dist) * (1.0f/300) * g_framedelay * (1.0f/1000);
 
-				if(handle == PlayerEntityHandle) {
+				if(handle == EntityHandle_Player) {
 					if(!BLOCK_PLAYER_CONTROLS) {
 						player.lifePool.current = std::min(player.lifePool.current + gain, player.Full_maxlife);
 					}
@@ -201,7 +168,7 @@ void DetectTrapSpell::Launch()
 {
 	spells.endByCaster(m_caster, SPELL_DETECT_TRAP);
 	
-	if(m_caster == PlayerEntityHandle) {
+	if(m_caster == EntityHandle_Player) {
 		m_target = m_caster;
 		if(!(m_flags & SPELLCAST_FLAG_NOSOUND)) {
 			ARX_SOUND_PlayInterface(SND_SPELL_DETECT_TRAP);
@@ -218,7 +185,7 @@ void DetectTrapSpell::Launch()
 
 void DetectTrapSpell::End()
 {
-	if(m_caster == PlayerEntityHandle) {
+	if(m_caster == EntityHandle_Player) {
 		ARX_SOUND_Stop(m_snd_loop);
 	}
 	m_targets.clear();
@@ -226,7 +193,7 @@ void DetectTrapSpell::End()
 
 void DetectTrapSpell::Update() {
 	
-	if(m_caster == PlayerEntityHandle) {
+	if(m_caster == EntityHandle_Player) {
 		Vec3f pos = ARX_PLAYER_FrontPos();
 		ARX_SOUND_RefreshPosition(m_snd_loop, pos);
 	}
@@ -240,7 +207,7 @@ void ArmorSpell::Launch()
 	spells.endByCaster(m_caster, SPELL_FIRE_PROTECTION);
 	spells.endByCaster(m_caster, SPELL_COLD_PROTECTION);
 	
-	if(m_caster == PlayerEntityHandle) {
+	if(m_caster == EntityHandle_Player) {
 		m_target = m_caster;
 	}
 	
@@ -252,7 +219,7 @@ void ArmorSpell::Launch()
 	
 	m_duration = (m_launchDuration > ArxDuration(-1)) ? m_launchDuration : ArxDurationMs(20000);
 	
-	if(m_caster == PlayerEntityHandle)
+	if(m_caster == EntityHandle_Player)
 		m_duration = ArxDurationMs(20000000);
 	
 	m_hasDuration = true;
@@ -315,7 +282,7 @@ void LowerArmorSpell::Launch()
 	
 	m_duration = (m_launchDuration > ArxDuration(-1)) ? m_launchDuration : ArxDurationMs(20000);
 	
-	if(m_caster == PlayerEntityHandle)
+	if(m_caster == EntityHandle_Player)
 		m_duration = ArxDurationMs(20000000);
 	
 	m_hasDuration = true;
@@ -375,7 +342,7 @@ Vec3f LowerArmorSpell::getPosition() {
 HarmSpell::HarmSpell()
 	: m_light()
 	, m_damage()
-	, m_pitch(0.f)
+	, m_yaw(0.f)
 {
 	
 }
@@ -405,10 +372,8 @@ void HarmSpell::Launch()
 	damage.type = DAMAGE_TYPE_FAKEFIRE | DAMAGE_TYPE_MAGICAL;
 	m_damage = DamageCreate(damage);
 	
-	m_light = GetFreeDynLight();
-	if(lightHandleIsValid(m_light)) {
-		EERIE_LIGHT * light = lightHandleGet(m_light);
-		
+	EERIE_LIGHT * light = dynLightCreate(m_light);
+	if(light) {
 		light->intensity = 2.3f;
 		light->fallend = 700.f;
 		light->fallstart = 500.f;
@@ -432,7 +397,7 @@ void HarmSpell::Update()
 	float refpos;
 	float scaley;
 	
-	if(m_caster == PlayerEntityHandle)
+	if(m_caster == EntityHandle_Player)
 		scaley = 90.f;
 	else
 		scaley = glm::abs(entities[m_caster]->physics.cyl.height * (1.0f/2)) + 30.f;
@@ -442,7 +407,7 @@ void HarmSpell::Update()
 	float mov = std::sin(frametime * (1.0f/800)) * scaley;
 	
 	Vec3f cabalpos;
-	if(m_caster == PlayerEntityHandle) {
+	if(m_caster == EntityHandle_Player) {
 		cabalpos.x = player.pos.x;
 		cabalpos.y = player.pos.y + 60.f - mov;
 		cabalpos.z = player.pos.z;
@@ -456,9 +421,8 @@ void HarmSpell::Update()
 	
 	float Es = std::sin(frametime * (1.0f/800) + glm::radians(scaley));
 	
-	if(lightHandleIsValid(m_light)) {
-		EERIE_LIGHT * light = lightHandleGet(m_light);
-		
+	EERIE_LIGHT * light = lightHandleGet(m_light);
+	if(light) {
 		light->pos.x = cabalpos.x;
 		light->pos.y = refpos;
 		light->pos.z = cabalpos.z;
@@ -473,8 +437,8 @@ void HarmSpell::Update()
 	mat.setBlendType(RenderMaterial::Additive);
 	
 	Anglef cabalangle(0.f, 0.f, 0.f);
-	cabalangle.setPitch(m_pitch + g_framedelay * 0.1f);
-	m_pitch = cabalangle.getPitch();
+	cabalangle.setYaw(m_yaw + g_framedelay * 0.1f);
+	m_yaw = cabalangle.getYaw();
 	
 	Vec3f cabalscale = Vec3f(Es);
 	Color3f cabalcolor = Color3f(0.8f, 0.4f, 0.f);

@@ -344,9 +344,9 @@ long DanaeSaveLevel(const fs::path & _fic) {
 	memcpy(dat, &llh, sizeof(DANAE_LLF_HEADER));
 	pos += sizeof(DANAE_LLF_HEADER);
 	
-	for(size_t i = 0; i < MAX_LIGHTS; i++) {
+	for(size_t i = 0; i < g_staticLightsMax; i++) {
 		
-		EERIE_LIGHT * el = GLight[i];
+		EERIE_LIGHT * el = g_staticLights[i];
 		
 		if(!el || el->m_isIgnitionLight) {
 			continue;
@@ -688,7 +688,7 @@ bool DanaeLoadLevel(const res::path & file, bool loadEntities) {
 			
 			long j = EERIE_LIGHT_Create();
 			if(j >= 0) {
-				EERIE_LIGHT * el = GLight[j];
+				EERIE_LIGHT * el = g_staticLights[j];
 				
 				el->exist = 1;
 				el->treat = 1;
@@ -752,9 +752,9 @@ bool DanaeLoadLevel(const res::path & file, bool loadEntities) {
 			fd->move.y = 0.f;
 			fd->move.z = 0.f;
 			Vec3f out;
-			out = VRotateY(fd->move, MAKEANGLE(fd->angle.getPitch()));
+			out = VRotateY(fd->move, MAKEANGLE(fd->angle.getYaw()));
 			
-			fd->move = VRotateX(out, MAKEANGLE(fd->angle.getYaw()));
+			fd->move = VRotateX(out, MAKEANGLE(fd->angle.getPitch()));
 		}
 	}
 	
@@ -861,7 +861,7 @@ bool DanaeLoadLevel(const res::path & file, bool loadEntities) {
 		
 		long j = EERIE_LIGHT_Create();
 		if(j >= 0) {
-			EERIE_LIGHT * el = GLight[j];
+			EERIE_LIGHT * el = g_staticLights[j];
 			
 			el->exist = 1;
 			el->treat = 1;
@@ -975,7 +975,8 @@ void DanaeClearLevel(long flag)
 	
 	EERIE_LIGHT_GlobalInit();
 	ARX_FOGS_Clear();
-	TOTIOPDL = 0;
+	
+	culledStaticLightsReset();
 	
 	UnlinkAllLinkedObjects();
 	
@@ -988,9 +989,7 @@ void DanaeClearLevel(long flag)
 	
 	bGCroucheToggle = false;
 	
-	for(size_t i = 0; i < MAX_DYNLIGHTS; i++) {
-		DynLight[i].exist = 0;
-	}
+	resetDynLights();
 	
 	TREATZONE_Release();
 	TREATZONE_Clear();

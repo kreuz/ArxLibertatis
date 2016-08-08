@@ -64,13 +64,13 @@ void MassLightningStrikeSpell::Launch()
 	m_soundEffectPlayed = false;
 	
 	float beta;
-	if(m_caster == PlayerEntityHandle) {
+	if(m_caster == EntityHandle_Player) {
 		m_pos = player.pos + Vec3f(0.f, 150.f, 0.f);
-		beta = player.angle.getPitch();
+		beta = player.angle.getYaw();
 	} else {
 		Entity * io = entities[m_caster];
 		m_pos = io->pos + Vec3f(0.f, -20.f, 0.f);
-		beta = io->angle.getPitch();
+		beta = io->angle.getYaw();
 	}
 	m_pos += angleToVectorXZ(beta) * 500.f;
 	
@@ -95,10 +95,8 @@ void MassLightningStrikeSpell::Launch()
 	
 	m_duration = maxDuration + ArxDurationMs(1000);
 	
-	m_light = GetFreeDynLight();
-	if(lightHandleIsValid(m_light)) {
-		EERIE_LIGHT * light = lightHandleGet(m_light);
-		
+	EERIE_LIGHT * light = dynLightCreate(m_light);
+	if(light) {
 		light->intensity = 1.8f;
 		light->fallend = 850.f;
 		light->fallstart = 500.f;
@@ -165,10 +163,9 @@ void MassLightningStrikeSpell::Update() {
 		m_soundEffectPlayed = true;
 		ARX_SOUND_PlaySFX(SND_SPELL_ELECTRIC, NULL, Random::getf(0.8f, 1.2f));
 	}
-
-	if(lightHandleIsValid(m_light)) {
-		EERIE_LIGHT * light = lightHandleGet(m_light);
-		
+	
+	EERIE_LIGHT * light = lightHandleGet(m_light);
+	if(light) {
 		light->intensity = Random::getf(1.3f, 2.3f);
 	}	
 }
@@ -252,7 +249,7 @@ void ControlTargetSpell::Launch()
 	
 	eSrc = player.pos;
 	
-	float fBetaRad = glm::radians(player.angle.getPitch());
+	float fBetaRad = glm::radians(player.angle.getYaw());
 	float fBetaRadCos = glm::cos(fBetaRad);
 	float fBetaRadSin = glm::sin(fBetaRad);
 	
@@ -315,9 +312,6 @@ void ControlTargetSpell::Update() {
 	
 	fTrail = (elapsed * fOneOnDuration) * 9 * (n + 2);
 
-	Vec3f v;
-	
-	Vec3f newpos = Vec3f_ZERO;
 	Vec3f lastpos = pathways[0];
 	
 	for(int i = 0; i < 9; i++) {
@@ -333,9 +327,7 @@ void ControlTargetSpell::Update() {
 
 			float t = toto * delta;
 			
-			v = glm::catmullRom(v1, v2, v3, v4, t);
-			
-			newpos = v;
+			Vec3f newpos = glm::catmullRom(v1, v2, v3, v4, t);
 			
 			if(fTrail - (i * n + toto) <= 70) {
 				float c = 1.0f - (fTrail - (i * n + toto)) / 70.0f;
@@ -351,7 +343,7 @@ void ControlTargetSpell::Update() {
 				}
 			}
 			
-			std::swap(lastpos, newpos);
+			lastpos = newpos;
 			
 			PARTICLE_DEF * pd = createParticle();
 			if(pd) {
@@ -461,7 +453,7 @@ void TeleportSpell::Launch()
 	
 	ARX_SOUND_PlaySFX(SND_SPELL_TELEPORT, &m_caster_pos);
 	
-	if(m_caster == PlayerEntityHandle) {
+	if(m_caster == EntityHandle_Player) {
 		LASTTELEPORT = 0.f;
 	}
 }

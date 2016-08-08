@@ -107,9 +107,9 @@ EntityHandle EntityManager::getById(const std::string & idString) const {
 	if(idString.empty() || idString == "none") {
 		return EntityHandle();
 	} else if(idString == "self" || idString == "me") {
-		return EntityHandle(-2);
+		return EntityHandle_Self;
 	} else if(idString == "player") {
-		return PlayerEntityHandle;
+		return EntityHandle_Player;
 	}
 	
 	return m_impl->getById(idString);
@@ -121,9 +121,9 @@ EntityHandle EntityManager::getById(const EntityId & id) const {
 		if(id.className().empty()) {
 			return EntityHandle();
 		} else if(id.className() == "self" || id.className() == "me") {
-			return EntityHandle(-2);
+			return EntityHandle_Self;
 		} else if(id.className() == "player") {
-			return PlayerEntityHandle;
+			return EntityHandle_Player;
 		}
 	}
 	
@@ -131,8 +131,15 @@ EntityHandle EntityManager::getById(const EntityId & id) const {
 }
 
 Entity * EntityManager::getById(const std::string & name, Entity * self) const {
-	long index = getById(name).handleData();
-	return (index == -1) ? NULL : (index == -2) ? self : entries[index]; 
+	
+	EntityHandle handle = getById(name);
+	if(handle == EntityHandle()) {
+		return NULL;
+	} else if(handle == EntityHandle_Self) {
+		return self;
+	} else {
+		return entries[handle.handleData()];
+	}
 }
 
 size_t EntityManager::add(Entity * entity) {

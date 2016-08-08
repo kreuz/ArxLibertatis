@@ -169,7 +169,6 @@ extern TextManager	*pTextManage;
 extern ArxInstant FORCE_TIME_RESTORE;
 
 extern long		DONT_WANT_PLAYER_INZONE;
-extern size_t		TOTPDL;
 extern long		COLLIDED_CLIMB_POLY;
 
 //-----------------------------------------------------------------------------
@@ -347,7 +346,7 @@ static void PlayerLaunchArrow_Test(float aimratio, float poisonous, const Vec3f 
 	
 	float damages = wd * (1.f + (player.m_skillFull.projectile + player.m_attributeFull.dexterity) * (1.f/50));
 
-	ARX_THROWN_OBJECT_Throw(PlayerEntityHandle, position, vect, quat, velocity, damages, poisonous);
+	ARX_THROWN_OBJECT_Throw(EntityHandle_Player, position, vect, quat, velocity, damages, poisonous);
 }
 
 //*************************************************************************************
@@ -436,9 +435,7 @@ void levelInit() {
 	
 	eyeball.exist=0;
 	
-	for(size_t i = 0; i < MAX_DYNLIGHTS; i++) {
-		lightHandleGet(LightHandle(i))->exist = 0;
-	}
+	resetDynLights();
 	
 	arxtime.update_last_frame_time();
 	
@@ -586,8 +583,8 @@ void levelInit() {
 	progressBarAdvance();
 	LoadLevelScreen();
 
-	player.desiredangle.setYaw(0.f);
-	player.angle.setYaw(0.f);
+	player.desiredangle.setPitch(0.f);
+	player.angle.setPitch(0.f);
 	ARX_PLAYER_RectifyPosition();
 
 	entities.player()->_npcdata->vvpos = -99999;
@@ -774,10 +771,10 @@ void ManageCombatModeAnimations() {
 							
 							EntityHandle num;
 							
-							if(CheckAnythingInSphere(sphere, PlayerEntityHandle, 0, &num)) {
+							if(CheckAnythingInSphere(sphere, EntityHandle_Player, 0, &num)) {
 								float dmgs = (player.m_miscFull.damages + 1) * player.m_strikeAimRatio;
 								
-								if(ARX_DAMAGES_TryToDoDamage(actionPointPosition(io->obj, id), dmgs, 40, PlayerEntityHandle)) {
+								if(ARX_DAMAGES_TryToDoDamage(actionPointPosition(io->obj, id), dmgs, 40, EntityHandle_Player)) {
 									player.m_weaponBlocked = layer1.ctime;
 								}
 								
@@ -1019,18 +1016,18 @@ void ManageCombatModeAnimations() {
 					Anglef angle;
 					Vec3f pos = player.pos + Vec3f(0.f, 40.f, 0.f);
 					
-					angle.setYaw(player.angle.getYaw());
-					angle.setPitch(player.angle.getPitch() + 8);
+					angle.setPitch(player.angle.getPitch());
+					angle.setYaw(player.angle.getYaw() + 8);
 					angle.setRoll(player.angle.getRoll());
 					PlayerLaunchArrow_Test(aimratio, poisonous, pos, angle);
-					angle.setYaw(player.angle.getYaw());
-					angle.setPitch(player.angle.getPitch() - 8);
+					angle.setPitch(player.angle.getPitch());
+					angle.setYaw(player.angle.getYaw() - 8);
 					PlayerLaunchArrow_Test(aimratio, poisonous, pos, angle);
-					angle.setYaw(player.angle.getYaw());
-					angle.setPitch(player.angle.getPitch() + 4.f);
+					angle.setPitch(player.angle.getPitch());
+					angle.setYaw(player.angle.getYaw() + 4.f);
 					PlayerLaunchArrow_Test(aimratio, poisonous, pos, angle);
-					angle.setYaw(player.angle.getYaw());
-					angle.setPitch(player.angle.getPitch() - 4.f);
+					angle.setPitch(player.angle.getPitch());
+					angle.setYaw(player.angle.getYaw() - 4.f);
 					PlayerLaunchArrow_Test(aimratio, poisonous, pos, angle);
 				}
 				

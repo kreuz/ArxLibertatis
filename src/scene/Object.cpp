@@ -87,18 +87,18 @@ void EERIE_RemoveCedricData(EERIE_3DOBJ * eobj);
 
 void Clear3DScene(EERIE_3DSCENE	* eerie);
 
-long GetGroupOriginByName(const EERIE_3DOBJ * eobj, const std::string & text) {
+ObjVertHandle GetGroupOriginByName(const EERIE_3DOBJ * eobj, const std::string & text) {
 	
 	if(!eobj)
-		return -1;
+		return ObjVertHandle();
 	
 	BOOST_FOREACH(const VertexGroup & group, eobj->grouplist) {
 		if(group.name == text) {
-			return group.origin;
+			return ObjVertHandle(group.origin);
 		}
 	}
 	
-	return -1;
+	return ObjVertHandle();
 }
 
 ActionPoint GetActionPointIdx(const EERIE_3DOBJ * eobj, const std::string & text) {
@@ -121,7 +121,7 @@ ObjVertGroup GetActionPointGroup(const EERIE_3DOBJ * eobj, ActionPoint idx) {
 		return ObjVertGroup();
 	
 	for(long i = eobj->grouplist.size() - 1; i >= 0; i--) {
-		const std::vector<size_t> & indices = eobj->grouplist[i].indexes;
+		const std::vector<u32> & indices = eobj->grouplist[i].indexes;
 		for(size_t j = 0; j < indices.size(); j++){
 			if(long(indices[j]) == idx.handleData()) {
 				return ObjVertGroup(i);
@@ -152,12 +152,9 @@ void EERIE_Object_Precompute_Fast_Access(EERIE_3DOBJ * eerie) {
 	
 	eerie->fastaccess.head_group = EERIE_OBJECT_GetGroup(eerie, "head");
 
-	if(eerie->fastaccess.head_group == ObjVertGroup())
-		eerie->fastaccess.head_group_origin = -1;
-	else
-	{
-		long lHeadOrigin  = eerie->grouplist[eerie->fastaccess.head_group.handleData()].origin;
-		eerie->fastaccess.head_group_origin = checked_range_cast<short>(lHeadOrigin);
+	if(eerie->fastaccess.head_group != ObjVertGroup()) {
+		ObjVertHandle lHeadOrigin = ObjVertHandle(eerie->grouplist[eerie->fastaccess.head_group.handleData()].origin);
+		eerie->fastaccess.head_group_origin = lHeadOrigin;
 	}
 	
 	eerie->fastaccess.sel_head     = EERIE_OBJECT_GetSelection(eerie, "head");
@@ -506,8 +503,8 @@ static void loadObjectData(EERIE_3DOBJ * eerie, const char * adr, size_t * poss,
 		
 		eerie->pos = pted3005->pos.toVec3();
 		
-		eerie->angle.setYaw((float)(pted3005->angle.alpha & 0xfff) * THEO_ROTCONVERT);
-		eerie->angle.setPitch((float)(pted3005->angle.beta & 0xfff) * THEO_ROTCONVERT);
+		eerie->angle.setPitch((float)(pted3005->angle.alpha & 0xfff) * THEO_ROTCONVERT);
+		eerie->angle.setYaw((float)(pted3005->angle.beta & 0xfff) * THEO_ROTCONVERT);
 		eerie->angle.setRoll((float)(pted3005->angle.gamma & 0xfff) * THEO_ROTCONVERT);
 		
 		eerie->point0 = eerie->vertexlist[pted3005->origin_index].v;
@@ -522,8 +519,8 @@ static void loadObjectData(EERIE_3DOBJ * eerie, const char * adr, size_t * poss,
 		
 		eerie->pos = pted->pos.toVec3();
 		
-		eerie->angle.setYaw((float)(pted->angle.alpha & 0xfff) * THEO_ROTCONVERT);
-		eerie->angle.setPitch((float)(pted->angle.beta & 0xfff) * THEO_ROTCONVERT);
+		eerie->angle.setPitch((float)(pted->angle.alpha & 0xfff) * THEO_ROTCONVERT);
+		eerie->angle.setYaw((float)(pted->angle.beta & 0xfff) * THEO_ROTCONVERT);
 		eerie->angle.setRoll((float)(pted->angle.gamma & 0xfff) * THEO_ROTCONVERT);
 		
 		eerie->point0 = eerie->vertexlist[pted->origin_index].v;
@@ -1288,14 +1285,14 @@ static EERIE_3DOBJ * TheoToEerie(const char * adr, long size, const res::path & 
 	}
 
 	// Apply Normals Spherical correction for NPC head
-	long neck_orgn = GetGroupOriginByName(eerie, "neck");
+	ObjVertHandle neck_orgn = GetGroupOriginByName(eerie, "neck");
 	ObjVertGroup head_idx = EERIE_OBJECT_GetGroup(eerie, "head");
 
-	if(head_idx != ObjVertGroup() && neck_orgn >= 0) {
+	if(head_idx != ObjVertGroup() && neck_orgn != ObjVertHandle()) {
 		VertexGroup & headGroup = eerie->grouplist[head_idx.handleData()];
 		
 		Vec3f center = Vec3f_ZERO;
-		Vec3f origin = eerie->vertexlist[neck_orgn].v;
+		Vec3f origin = eerie->vertexlist[neck_orgn.handleData()].v;
 		float count = (float)headGroup.indexes.size();
 
 		if(count > 0.f) {

@@ -40,12 +40,12 @@ void RiseDeadSpell::GetTargetAndBeta(Vec3f & target, float & beta)
 {
 	bool displace = true;
 	
-	if(m_caster == PlayerEntityHandle) {
+	if(m_caster == EntityHandle_Player) {
 		target = player.basePosition();
-		beta = player.angle.getPitch();
+		beta = player.angle.getYaw();
 	} else {
 		target = entities[m_caster]->pos;
-		beta = entities[m_caster]->angle.getPitch();
+		beta = entities[m_caster]->angle.getYaw();
 		displace = (entities[m_caster]->ioflags & IO_NPC) == IO_NPC;
 	}
 	if(displace) {
@@ -100,12 +100,8 @@ void RiseDeadSpell::Launch()
 	m_fissure.SetColorRays1(Color3f(0.5, 0.5, 0.5));
 	m_fissure.SetColorRays2(Color3f(1.f, 0.f, 0.f));
 	
-	if(!lightHandleIsValid(m_light)) {
-		m_light = GetFreeDynLight();
-	}
-	if(lightHandleIsValid(m_light)) {
-		EERIE_LIGHT * light = lightHandleGet(m_light);
-		
+	EERIE_LIGHT * light = dynLightCreate(m_light);
+	if(light) {
 		light->intensity = 1.3f;
 		light->fallend = 450.f;
 		light->fallstart = 380.f;
@@ -131,11 +127,8 @@ void RiseDeadSpell::End()
 			posi.y-=100.f;
 			MakeCoolFx(posi);
 			
-			LightHandle nn = GetFreeDynLight();
-
-			if(lightHandleIsValid(nn)) {
-				EERIE_LIGHT * light = lightHandleGet(nn);
-				
+			EERIE_LIGHT * light = dynLightCreate();
+			if(light) {
 				light->intensity = Random::getf(0.7f, 2.7f);
 				light->fallend = 600.f;
 				light->fallstart = 400.f;
@@ -163,9 +156,8 @@ void RiseDeadSpell::Update() {
 	m_fissure.Update(g_framedelay);
 	m_fissure.Render();
 	
-	if(lightHandleIsValid(m_light)) {
-		EERIE_LIGHT * light = lightHandleGet(m_light);
-		
+	EERIE_LIGHT * light = lightHandleGet(m_light);
+	if(light) {
 		light->intensity = 0.7f + 2.3f;
 		light->fallend = 500.f;
 		light->fallstart = 400.f;
@@ -236,7 +228,7 @@ void ParalyseSpell::Launch()
 	m_duration = (m_launchDuration > ArxDuration(-1)) ? m_launchDuration : ArxDurationMs(5000);
 	
 	float resist_magic = 0.f;
-	if(m_target == PlayerEntityHandle && m_level <= player.level) {
+	if(m_target == EntityHandle_Player && m_level <= player.level) {
 		resist_magic = player.m_misc.resistMagic;
 	} else if(entities[m_target]->ioflags & IO_NPC) {
 		resist_magic = entities[m_target]->_npcdata->resist_magic;
@@ -286,15 +278,15 @@ void CreateFieldSpell::Launch()
 	Vec3f target;
 	float beta = 0.f;
 	bool displace = false;
-	if(m_caster == PlayerEntityHandle) {
+	if(m_caster == EntityHandle_Player) {
 		target = entities.player()->pos;
-		beta = player.angle.getPitch();
+		beta = player.angle.getYaw();
 		displace = true;
 	} else {
 		if(ValidIONum(m_caster)) {
 			Entity * io = entities[m_caster];
 			target = io->pos;
-			beta = io->angle.getPitch();
+			beta = io->angle.getYaw();
 			displace = (io->ioflags & IO_NPC) == IO_NPC;
 		} else {
 			ARX_DEAD_CODE();
@@ -320,11 +312,9 @@ void CreateFieldSpell::Launch()
 		
 		m_field.Create(target);
 		m_field.SetDuration(m_duration);
-		m_field.lLightId = GetFreeDynLight();
 		
-		if(lightHandleIsValid(m_field.lLightId)) {
-			EERIE_LIGHT * light = lightHandleGet(m_field.lLightId);
-			
+		EERIE_LIGHT * light = dynLightCreate(m_field.lLightId);
+		if(light) {
 			light->intensity = 0.7f + 2.3f;
 			light->fallend = 500.f;
 			light->fallstart = 400.f;
@@ -421,7 +411,7 @@ void SlowDownSpell::Launch()
 	
 	m_duration = (m_launchDuration > ArxDuration(-1)) ? m_launchDuration : ArxDurationMs(10000);
 	
-	if(m_caster == PlayerEntityHandle)
+	if(m_caster == EntityHandle_Player)
 		m_duration = ArxDurationMs(10000000);
 	
 	m_hasDuration = true;

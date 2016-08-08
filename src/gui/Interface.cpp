@@ -990,13 +990,13 @@ void ArxGame::managePlayerControls() {
 
 			// Checks WALK_FORWARD Key Status.
 			if(GInput->actionPressed(CONTROLS_CUST_WALKFORWARD)) {
-				eyeball.pos += angleToVectorXZ(eyeball.angle.getPitch()) * 20.f * FD * 0.033f;
+				eyeball.pos += angleToVectorXZ(eyeball.angle.getYaw()) * 20.f * FD * 0.033f;
 				NOMOREMOVES=1;
 			}
 
 			// Checks WALK_BACKWARD Key Status.
 			if(GInput->actionPressed(CONTROLS_CUST_WALKBACKWARD)) {
-				eyeball.pos += angleToVectorXZ_180offset(eyeball.angle.getPitch()) * 20.f * FD * 0.033f;
+				eyeball.pos += angleToVectorXZ_180offset(eyeball.angle.getYaw()) * 20.f * FD * 0.033f;
 				NOMOREMOVES=1;
 			}
 
@@ -1005,7 +1005,7 @@ void ArxGame::managePlayerControls() {
 				(GInput->actionPressed(CONTROLS_CUST_STRAFE)&&GInput->actionPressed(CONTROLS_CUST_TURNLEFT)))
 				&& !NOMOREMOVES)
 			{
-				eyeball.pos += angleToVectorXZ(eyeball.angle.getPitch() + 90.f) * 10.f * FD * 0.033f;
+				eyeball.pos += angleToVectorXZ(eyeball.angle.getYaw() + 90.f) * 10.f * FD * 0.033f;
 				NOMOREMOVES=1;			
 			}
 
@@ -1014,7 +1014,7 @@ void ArxGame::managePlayerControls() {
 				(GInput->actionPressed(CONTROLS_CUST_STRAFE)&&GInput->actionPressed(CONTROLS_CUST_TURNRIGHT)))
 				&& !NOMOREMOVES)
 			{
-				eyeball.pos += angleToVectorXZ(eyeball.angle.getPitch() - 90.f) * 10.f * FD * 0.033f;
+				eyeball.pos += angleToVectorXZ(eyeball.angle.getYaw() - 90.f) * 10.f * FD * 0.033f;
 				//eyeball.pos.y+=FD*0.33f;
 				NOMOREMOVES=1;
 			}
@@ -1076,10 +1076,10 @@ void ArxGame::managePlayerControls() {
 			}
 			
 			multi = 5.f * FD * MoveDiv * multi;
-			tm += angleToVectorXZ_180offset(player.angle.getPitch()) * multi;
+			tm += angleToVectorXZ_180offset(player.angle.getYaw()) * multi;
 
 			if(!USE_PLAYERCOLLISIONS) {
-				float t = glm::radians(player.angle.getYaw());
+				float t = glm::radians(player.angle.getPitch());
 				tm.y -= std::sin(t) * multi;
 			}
 
@@ -1102,10 +1102,10 @@ void ArxGame::managePlayerControls() {
 			}
 			
 			multi = 10.f * FD * MoveDiv * multi;
-			tm += angleToVectorXZ(player.angle.getPitch()) * multi;
+			tm += angleToVectorXZ(player.angle.getYaw()) * multi;
 
 			if(!USE_PLAYERCOLLISIONS) {
-				float t = glm::radians(player.angle.getYaw());
+				float t = glm::radians(player.angle.getPitch());
 				tm.y += std::sin(t) * multi;
 			}
 
@@ -1122,7 +1122,7 @@ void ArxGame::managePlayerControls() {
 		if(left && !NOMOREMOVES) {
 			player.m_strikeDirection=0;
 			float multi = 6.f * FD * MoveDiv;
-			tm += angleToVectorXZ(player.angle.getPitch() + 90.f) * multi;
+			tm += angleToVectorXZ(player.angle.getYaw() + 90.f) * multi;
 			
 			player.m_currentMovement |= PLAYER_MOVE_STRAFE_LEFT;
 
@@ -1137,7 +1137,7 @@ void ArxGame::managePlayerControls() {
 		if(right && !NOMOREMOVES) {
 			player.m_strikeDirection=1;
 			float multi = 6.f * FD * MoveDiv;
-			tm += angleToVectorXZ(player.angle.getPitch() - 90.f) * multi;
+			tm += angleToVectorXZ(player.angle.getYaw() - 90.f) * multi;
 			
 			player.m_currentMovement |= PLAYER_MOVE_STRAFE_RIGHT;
 
@@ -1273,7 +1273,7 @@ void ArxGame::managePlayerControls() {
 		for(long i = MAX_SPELLS - 1; i >= 0; i--) {
 			SpellBase * spell = spells[SpellHandle(i)];
 			
-			if(spell && spell->m_caster == PlayerEntityHandle)
+			if(spell && spell->m_caster == EntityHandle_Player)
 				if(spellicons[spell->m_type].m_hasDuration) {
 					ARX_SOUND_PlaySFX(SND_MAGIC_FIZZLE);
 					spells.endSpell(spell);
@@ -1496,7 +1496,7 @@ void ArxGame::managePlayerControls() {
 
 		if(bRenderInCursorMode) {
 			if(eyeball.exist != 0) {
-				spells.endByCaster(PlayerEntityHandle, SPELL_FLYING_EYE);
+				spells.endByCaster(EntityHandle_Player, SPELL_FLYING_EYE);
 			}
 		}
 	}
@@ -1841,10 +1841,10 @@ void ArxGame::manageKeyMouse() {
 		}
 
 		if(GInput->actionPressed(CONTROLS_CUST_CENTERVIEW)) {
-			eyeball.angle.setYaw(0);
+			eyeball.angle.setPitch(0);
 			eyeball.angle.setRoll(0);
-			player.desiredangle.setYaw(0);
-			player.angle.setYaw(0);
+			player.desiredangle.setPitch(0);
+			player.angle.setPitch(0);
 			player.desiredangle.setRoll(0);
 			player.angle.setRoll(0);
 		}
@@ -1865,29 +1865,29 @@ void ArxGame::manageKeyMouse() {
 		if(PLAYER_MOUSELOOK_ON || bKeySpecialMove) {
 
 			if(eyeball.exist == 2) {
-				if(eyeball.angle.getYaw() < 70.f) {
-					if(eyeball.angle.getYaw() + rotation.y < 70.f)
-						eyeball.angle.setYaw(eyeball.angle.getYaw() + rotation.y);
-				} else if(eyeball.angle.getYaw() > 300.f) {
-					if(eyeball.angle.getYaw() + rotation.y > 300.f)
-						eyeball.angle.setYaw(eyeball.angle.getYaw() + rotation.y);
+				if(eyeball.angle.getPitch() < 70.f) {
+					if(eyeball.angle.getPitch() + rotation.y < 70.f)
+						eyeball.angle.setPitch(eyeball.angle.getPitch() + rotation.y);
+				} else if(eyeball.angle.getPitch() > 300.f) {
+					if(eyeball.angle.getPitch() + rotation.y > 300.f)
+						eyeball.angle.setPitch(eyeball.angle.getPitch() + rotation.y);
 				}
 
-				eyeball.angle.setYaw(MAKEANGLE(eyeball.angle.getYaw()));
-				eyeball.angle.setPitch(MAKEANGLE(eyeball.angle.getPitch() - rotation.x));
+				eyeball.angle.setPitch(MAKEANGLE(eyeball.angle.getPitch()));
+				eyeball.angle.setYaw(MAKEANGLE(eyeball.angle.getYaw() - rotation.x));
 			} else if(ARXmenu.currentmode != AMCM_NEWQUEST) {
 
-				float iangle = player.angle.getYaw();
+				float iangle = player.angle.getPitch();
 
-				player.desiredangle.setYaw(player.angle.getYaw());
-				player.desiredangle.setYaw(player.desiredangle.getYaw() + rotation.y);
-				player.desiredangle.setYaw(MAKEANGLE(player.desiredangle.getYaw()));
+				player.desiredangle.setPitch(player.angle.getPitch());
+				player.desiredangle.setPitch(player.desiredangle.getPitch() + rotation.y);
+				player.desiredangle.setPitch(MAKEANGLE(player.desiredangle.getPitch()));
 
-				if(player.desiredangle.getYaw() >= 74.9f && player.desiredangle.getYaw() <= 301.f) {
+				if(player.desiredangle.getPitch() >= 74.9f && player.desiredangle.getPitch() <= 301.f) {
 					if(iangle < 75.f)
-						player.desiredangle.setYaw(74.9f); //69
+						player.desiredangle.setPitch(74.9f); //69
 					else
-						player.desiredangle.setYaw(301.f);
+						player.desiredangle.setPitch(301.f);
 				}
 
 				if(glm::abs(rotation.y) > 2.f)
@@ -1898,8 +1898,8 @@ void ArxGame::manageKeyMouse() {
 
 				PLAYER_ROTATION = rotation.x;
 
-				player.desiredangle.setPitch(player.angle.getPitch());
-				player.desiredangle.setPitch(MAKEANGLE(player.desiredangle.getPitch() - rotation.x));
+				player.desiredangle.setYaw(player.angle.getYaw());
+				player.desiredangle.setYaw(MAKEANGLE(player.desiredangle.getYaw() - rotation.x));
 			}
 		}
 	}
@@ -2198,8 +2198,8 @@ void ArxGame::manageEditorControls() {
 			} else { // GLights
 				float fMaxdist = player.m_telekinesis ? 850 : 300;
 				
-				for(size_t i = 0; i < MAX_LIGHTS; i++) {
-					EERIE_LIGHT * light = GLight[i];
+				for(size_t i = 0; i < g_staticLightsMax; i++) {
+					EERIE_LIGHT * light = g_staticLights[i];
 					
 					if(   light
 					   && light->exist
@@ -2244,8 +2244,8 @@ void ArxGame::manageEditorControls() {
 		if(COMBINE) {
 			float fMaxdist = player.m_telekinesis ? 850 : 300;
 			
-			for(size_t i = 0; i < MAX_LIGHTS; i++) {
-				EERIE_LIGHT * light = GLight[i];
+			for(size_t i = 0; i < g_staticLightsMax; i++) {
+				EERIE_LIGHT * light = g_staticLights[i];
 				
 				if(   light
 				   && light->exist
@@ -2338,7 +2338,7 @@ void ArxGame::manageEditorControls() {
 				LastSelectedIONum = io->index();
 			} else {
 				if(LastSelectedIONum == EntityHandle())
-					LastSelectedIONum = PlayerEntityHandle;
+					LastSelectedIONum = EntityHandle_Player;
 				else
 					LastSelectedIONum = EntityHandle();
 			}

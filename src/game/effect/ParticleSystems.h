@@ -17,22 +17,27 @@
  * along with Arx Libertatis.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef ARX_CINEMATIC_CINEMATICCONTROLLER_H
-#define ARX_CINEMATIC_CINEMATICCONTROLLER_H
+#ifndef ARX_GAME_EFFECT_PARTICLESYSTEMS_H
+#define ARX_GAME_EFFECT_PARTICLESYSTEMS_H
 
-#include <string>
+#include "graphics/particle/ParticleParams.h"
 
-void cinematicPrepare(std::string name, bool preload);
+enum ParticleParam {
+	ParticleParam_MagicMissileExplosion,
+	ParticleParam_MagicMissileExplosionMar,
+	ParticleParam_Heal,
+	ParticleParam_CreateFood,
+	ParticleParam_CurePoison,
+	ParticleParam_FireFieldBase,
+	ParticleParam_FireFieldFlame,
+	ParticleParam_Poison1,
+	ParticleParam_Poison2,
+	ParticleParam_Poison3,
+	ParticleParam_MAX
+};
 
-void cinematicRequestStart();
+extern ParticleParams g_particleParameters[ParticleParam_MAX];
 
-void cinematicKill();
+void particleParametersInit();
 
-void cinematicLaunchWaiting();
-
-bool cinematicIsStopped();
-
-bool isInCinematic();
-void cinematicRender();
-
-#endif // ARX_CINEMATIC_CINEMATICCONTROLLER_H
+#endif // ARX_GAME_EFFECT_PARTICLESYSTEMS_H

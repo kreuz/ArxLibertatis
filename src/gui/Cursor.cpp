@@ -116,7 +116,7 @@ bool Manage3DCursor(Entity * io, bool simulate) {
 	if(BLOCK_PLAYER_CONTROLS)
 		return false;
 
-	float ag = player.angle.getYaw();
+	float ag = player.angle.getPitch();
 
 	if(ag > 180)
 		ag = ag - 360;
@@ -126,13 +126,13 @@ bool Manage3DCursor(Entity * io, bool simulate) {
 	if(DANAEMouse.y < drop_miny)
 		return false;
 	
-	Anglef temp = Anglef::ZERO;
+	Anglef angle = Anglef::ZERO;
 
 	if(io->ioflags & IO_INVERTED) {
-		temp.setYaw(180.f);
-		temp.setPitch(-MAKEANGLE(270.f - io->angle.getPitch() - (player.angle.getPitch() - STARTED_ANGLE)));
+		angle.setPitch(180.f);
+		angle.setYaw(-MAKEANGLE(270.f - io->angle.getYaw() - (player.angle.getYaw() - STARTED_ANGLE)));
 	} else {
-		temp.setPitch(MAKEANGLE(270.f - io->angle.getPitch() - (player.angle.getPitch() - STARTED_ANGLE)));
+		angle.setYaw(MAKEANGLE(270.f - io->angle.getYaw() - (player.angle.getYaw() - STARTED_ANGLE)));
 	}
 	
 	EERIE_3D_BBOX bbox;
@@ -140,7 +140,7 @@ bool Manage3DCursor(Entity * io, bool simulate) {
 		bbox.add(io->obj->vertexlist[i].v);
 	}
 	
-	Vec3f mvectx = angleToVectorXZ(player.angle.getPitch() - 90.f);
+	Vec3f mvectx = angleToVectorXZ(player.angle.getYaw() - 90.f);
 	
 	Vec2f mod = Vec2f(Vec2i(DANAEMouse) - g_size.center()) / Vec2f(g_size.center()) * Vec2f(160.f, 220.f);
 	mvectx *= mod.x;
@@ -228,7 +228,7 @@ bool Manage3DCursor(Entity * io, bool simulate) {
 	
 	}
 	
-	objcenter = VRotateY(objcenter, temp.getPitch());
+	objcenter = VRotateY(objcenter, angle.getYaw());
 	
 	collidpos.x -= objcenter.x;
 	collidpos.z -= objcenter.z;
@@ -247,7 +247,7 @@ bool Manage3DCursor(Entity * io, bool simulate) {
 
 			io->gameFlags &= ~GFLAG_NOCOMPUTATION;
 			
-			glm::quat rotation = glm::toQuat(toRotationMatrix(temp));
+			glm::quat rotation = glm::toQuat(toRotationMatrix(angle));
 			
 			if(SPECIAL_DRAGINTER_RENDER) {
 			if(glm::abs(lastanything) > glm::abs(height)) {
@@ -280,7 +280,7 @@ bool Manage3DCursor(Entity * io, bool simulate) {
 				movev.z *= 0.0001f;
 				Vec3f viewvector = movev;
 
-				Anglef angle = temp;
+				Anglef angle = angle;
 				io->soundtime = ArxInstant_ZERO;
 				io->soundcount = 0;
 				EERIE_PHYSICS_BOX_Launch(io->obj, io->pos, angle, viewvector);
@@ -292,9 +292,9 @@ bool Manage3DCursor(Entity * io, bool simulate) {
 				ARX_SOUND_PlayInterface(SND_INVSTD);
 				ARX_INTERACTIVE_Teleport(io, pos, true);
 
-				io->angle.setYaw(temp.getYaw());
-				io->angle.setPitch(270.f - temp.getPitch());
-				io->angle.setRoll(temp.getRoll());
+				io->angle.setPitch(angle.getPitch());
+				io->angle.setYaw(270.f - angle.getYaw());
+				io->angle.setRoll(angle.getRoll());
 
 				io->stopped = 0;
 				io->show = SHOW_FLAG_IN_SCENE;
@@ -472,7 +472,7 @@ static void ARX_INTERFACE_RenderCursorInternal(bool flag) {
 	   || (MAGICMODE && PLAYER_MOUSELOOK_ON)
 	) {
 		CANNOT_PUT_IT_HERE = EntityMoveCursor_Ok;
-		float ag=player.angle.getYaw();
+		float ag=player.angle.getPitch();
 		
 		if(ag > 180)
 			ag = ag - 360;

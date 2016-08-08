@@ -131,8 +131,8 @@ void ARX_INTERFACE_ManageOpenedBook_Finish(const Vec2f & mousePos)
 	
 	EERIE_CAMERA * oldcam = ACTIVECAM;
 	
-	PDL[0] = light;
-	TOTPDL=1;
+	g_culledDynamicLights[0] = light;
+	g_culledDynamicLightsCount = 1;
 	
 	Vec2i tmpPos = Vec2i_ZERO;
 	
@@ -149,25 +149,25 @@ void ARX_INTERFACE_ManageOpenedBook_Finish(const Vec2f & mousePos)
 		PrepareCamera(&bookcam, g_size);
 		
 		// First draw the lace
-		angle.setPitch(0.f);
+		angle.setYaw(0.f);
 		
 		if(player.hasRune((Rune)i)) {
 			
 			TransformInfo t1(pos, glm::toQuat(toRotationMatrix(angle)));
 			DrawEERIEInter(gui::necklace.lacet, t1, NULL, false, 0.f);
 			
-			if(rune->angle.getPitch() != 0.f) {
-				if(rune->angle.getPitch() > 300.f)
-					rune->angle.setPitch(300.f);
+			if(rune->angle.getYaw() != 0.f) {
+				if(rune->angle.getYaw() > 300.f)
+					rune->angle.setYaw(300.f);
 				
 				arxtime.update();
-				angle.setPitch(std::sin(arxtime.now_f() * (1.0f / 200)) * rune->angle.getPitch() * (1.0f / 40));
+				angle.setYaw(std::sin(arxtime.now_f() * (1.0f / 200)) * rune->angle.getYaw() * (1.0f / 40));
 			}
 			
-			rune->angle.setPitch(rune->angle.getPitch() - g_framedelay * 0.2f);
+			rune->angle.setYaw(rune->angle.getYaw() - g_framedelay * 0.2f);
 			
-			if(rune->angle.getPitch() < 0.f)
-				rune->angle.setPitch(0.f);
+			if(rune->angle.getYaw() < 0.f)
+				rune->angle.setYaw(0.f);
 			
 			GRenderer->SetRenderState(Renderer::DepthWrite, true);
 			GRenderer->SetRenderState(Renderer::AlphaBlending, false);
@@ -207,7 +207,7 @@ void ARX_INTERFACE_ManageOpenedBook_Finish(const Vec2f & mousePos)
 					TransformInfo t(pos, glm::toQuat(toRotationMatrix(angle)));
 					DrawEERIEInter(rune, t, NULL, false, 0.f);
 					
-					rune->angle.setPitch(rune->angle.getPitch() + g_framedelay*2.f);
+					rune->angle.setYaw(rune->angle.getYaw() + g_framedelay*2.f);
 					
 					PopAllTriangleListOpaque();
 					

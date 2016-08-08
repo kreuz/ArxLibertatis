@@ -179,9 +179,9 @@ static EntityHandle ReadTargetInfo(const char (&str)[N]) {
 	if(idString == "none") {
 		return EntityHandle();
 	} else if(idString == "self") {
-		return EntityHandle(-2);
+		return EntityHandle_Self;
 	} else if(idString == "player") {
-		return PlayerEntityHandle;
+		return EntityHandle_Player;
 	} else {
 		Entity * e = convertToValidIO(idString);
 		return (e == NULL) ? EntityHandle() : e->index();
@@ -319,8 +319,8 @@ void ARX_CHANGELEVEL_Change(const std::string & level, const std::string & targe
 			g_moveto = player.pos = pos + player.baseOffset();
 			PLAYER_POSITION_RESET = false;
 		}
-		player.desiredangle.setPitch(angle);
-		player.angle.setPitch(angle);
+		player.desiredangle.setYaw(angle);
+		player.angle.setYaw(angle);
 		return; // nothing more to do :)
 	}
 	
@@ -356,8 +356,8 @@ void ARX_CHANGELEVEL_Change(const std::string & level, const std::string & targe
 	}
 	
 	CURRENTLEVEL = num;
-	player.desiredangle.setPitch(angle);
-	player.angle.setPitch(angle);
+	player.desiredangle.setYaw(angle);
+	player.angle.setYaw(angle);
 	DONT_WANT_PLAYER_INZONE = 1;
 	ARX_PLAYER_RectifyPosition();
 	JUST_RELOADED = 1;
@@ -448,8 +448,8 @@ static bool ARX_CHANGELEVEL_Push_Index(long num) {
 		}
 	}
 	
-	for(size_t i = 0; i < MAX_LIGHTS; i++) {
-		EERIE_LIGHT * el = GLight[i];
+	for(size_t i = 0; i < g_staticLightsMax; i++) {
+		EERIE_LIGHT * el = g_staticLights[i];
 		if(el && !el->m_isIgnitionLight) {
 			asi.nb_lights++;
 		}
@@ -504,8 +504,8 @@ static bool ARX_CHANGELEVEL_Push_Index(long num) {
 		free(playlist);
 	}
 	
-	for(size_t i = 0; i < MAX_LIGHTS; i++) {
-		EERIE_LIGHT * el = GLight[i];
+	for(size_t i = 0; i < g_staticLightsMax; i++) {
+		EERIE_LIGHT * el = g_staticLights[i];
 		if(el != NULL && !el->m_isIgnitionLight) {
 			ARX_CHANGELEVEL_LIGHT * acl = (ARX_CHANGELEVEL_LIGHT *)(dat + pos);
 			memset(acl, 0, sizeof(ARX_CHANGELEVEL_LIGHT));
@@ -691,7 +691,7 @@ static long ARX_CHANGELEVEL_Push_Player(long level) {
 
 	asp->jumpphase = player.jumpphase;
 	asp->jumpstarttime = static_cast<u32>(player.jumpstarttime); // TODO save/load time
-	asp->Last_Movement = player.Last_Movement;
+	asp->Last_Movement = player.m_lastMovement;
 	asp->level = player.level;
 	
 	asp->life = player.lifePool.current;
@@ -856,11 +856,11 @@ static Entity * GetObjIOSource(const EERIE_3DOBJ * obj) {
 template <size_t N>
 void FillTargetInfo(char (&info)[N], EntityHandle numtarget) {
 	ARX_STATIC_ASSERT(N >= 6, "id string too short");
-	if(numtarget == EntityHandle(-2)) {
+	if(numtarget == EntityHandle_Self) {
 		strcpy(info, "self");
 	} else if(numtarget == EntityHandle()) {
 		strcpy(info, "none");
-	} else if(numtarget == PlayerEntityHandle) {
+	} else if(numtarget == EntityHandle_Player) {
 		strcpy(info, "player");
 	} else if(ValidIONum(numtarget)) {
 		storeIdString(info, entities[numtarget]);
@@ -1544,8 +1544,8 @@ static long ARX_CHANGELEVEL_Pop_Zones_n_Lights(ARX_CHANGELEVEL_INDEX * asi, long
 		
 		long count = 0;
 
-		for(size_t j = 0; j < MAX_LIGHTS; j++) {
-			EERIE_LIGHT * el = GLight[j];
+		for(size_t j = 0; j < g_staticLightsMax; j++) {
+			EERIE_LIGHT * el = g_staticLights[j];
 			if(el && !el->m_isIgnitionLight) {
 				if(count == i) {
 					el->m_ignitionStatus = (acl->status != 0);
@@ -1564,8 +1564,7 @@ static long ARX_CHANGELEVEL_Pop_Zones_n_Lights(ARX_CHANGELEVEL_INDEX * asi, long
 static long ARX_CHANGELEVEL_Pop_Level(ARX_CHANGELEVEL_INDEX * asi, long num,
                                       bool firstTime) {
 	
-	char levelId[256];
-	GetLevelNameByNum(num, levelId);
+	const char * levelId = GetLevelNameByNum(num);
 	std::string levelFile = std::string("graph/levels/level") + levelId + "/level" + levelId + ".dlf";
 	
 	LOAD_N_ERASE = false;
@@ -1681,7 +1680,7 @@ static long ARX_CHANGELEVEL_Pop_Player() {
 	player.inzone = ARX_PATH_GetAddressByName(boost::to_lower_copy(util::loadString(asp->inzone)));
 	player.jumpphase = JumpPhase(asp->jumpphase); // TODO save/load enum
 	player.jumpstarttime = ArxInstantMs(asp->jumpstarttime); // TODO save/load time
-	player.Last_Movement = PlayerMovement::load(asp->Last_Movement); // TODO save/load flags
+	player.m_lastMovement = PlayerMovement::load(asp->Last_Movement); // TODO save/load flags
 	
 	player.level = checked_range_cast<short>(asp->level);
 	

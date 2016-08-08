@@ -155,7 +155,7 @@ static void CheckHit(Entity * source, float ratioaim) {
 		return;
 	
 	Vec3f from(0.f, 0.f, -90.f);
-	Vec3f to = VRotateY(from, MAKEANGLE(180.f - source->angle.getPitch()));
+	Vec3f to = VRotateY(from, MAKEANGLE(180.f - source->angle.getYaw()));
 	Vec3f ppos = source->pos + Vec3f(0.f, -80.f, 0.f);
 	Vec3f pos = ppos + to;
 
@@ -665,7 +665,7 @@ wander:
 		        ||	(io->_npcdata->behavior & BEHAVIOUR_FLEE))
 			from = AnchorData_GetNearest(pos1, io->physics.cyl);
 		else
-			from = AnchorData_GetNearest_2(io->angle.getPitch(), pos1, io->physics.cyl);
+			from = AnchorData_GetNearest_2(io->angle.getYaw(), pos1, io->physics.cyl);
 	}
 	else from = MUST_SELECT_Start_Anchor;
 
@@ -1073,7 +1073,7 @@ void FaceTarget2(Entity * io)
 	}
 
 	float tangle = MAKEANGLE(180.f + glm::degrees(getAngle(io->target.x, io->target.z, tv.x, tv.z)));
-	float cangle = io->angle.getPitch();
+	float cangle = io->angle.getYaw();
 
 	float tt = (cangle - tangle);
 
@@ -1100,7 +1100,7 @@ void FaceTarget2(Entity * io)
 	}
 	
 	// Needed angle to turn toward target
-	io->angle.setPitch(MAKEANGLE(io->angle.getPitch() - rot)); // -tt
+	io->angle.setYaw(MAKEANGLE(io->angle.getYaw() - rot)); // -tt
 }
 
 void StareAtTarget(Entity * io)
@@ -1133,7 +1133,7 @@ void StareAtTarget(Entity * io)
 		return;
 
 	float rot = 0.27f * g_framedelay;
-	float alpha = MAKEANGLE(io->angle.getPitch());
+	float alpha = MAKEANGLE(io->angle.getYaw());
 	float beta = -io->head_rot; 
 	float pouet = MAKEANGLE(180.f + glm::degrees(getAngle(io->target.x, io->target.z, tv.x, tv.z)));
 	float A = MAKEANGLE((MAKEANGLE(alpha + beta) - pouet));
@@ -1181,8 +1181,8 @@ void StareAtTarget(Entity * io)
 	groupRotation[0] = glm::clamp(groupRotation[0], -HEAD_ANGLE_THRESHOLD, HEAD_ANGLE_THRESHOLD);
 	groupRotation[1] = glm::clamp(groupRotation[1], -HEAD_ANGLE_THRESHOLD, HEAD_ANGLE_THRESHOLD);
 
-	io->_npcdata->ex_rotate->group_rotate[0].setPitch(groupRotation[0]);
-	io->_npcdata->ex_rotate->group_rotate[1].setPitch(groupRotation[1]);
+	io->_npcdata->ex_rotate->group_rotate[0].setYaw(groupRotation[0]);
+	io->_npcdata->ex_rotate->group_rotate[1].setYaw(groupRotation[1]);
 
 	//MAKEANGLE(io->angle.b-rot); // -tt
 	return;
@@ -1458,7 +1458,7 @@ static bool TryIOAnimMove(Entity * io, long animnum) {
 		return false;
 	
 	Vec3f trans = GetAnimTotalTranslate(io->anims[animnum], 0);
-	Vec3f trans2 = VRotateY(trans, MAKEANGLE(180.f - io->angle.getPitch()));
+	Vec3f trans2 = VRotateY(trans, MAKEANGLE(180.f - io->angle.getYaw()));
 	
 	IO_PHYSICS phys = io->physics;
 	phys.cyl = GetIOCyl(io);
@@ -1840,7 +1840,7 @@ static void ComputeTolerance(Entity * io, EntityHandle targ, float * dst) {
 			TOLERANCE += 20.f;
 
 		// If target is the player improve again tolerance
-		if(io->targetinfo == PlayerEntityHandle)
+		if(io->targetinfo == EntityHandle_Player)
 			TOLERANCE += 10.f;
 
 		if(io->_npcdata->behavior & BEHAVIOUR_FIGHT)
@@ -1890,12 +1890,12 @@ static void ManageNPCMovement(Entity * io)
 			aup->_curtime -= 500;
 			ARX_PATHS_Interpolate(aup, &tv);
 			aup->_curtime += 500;
-			io->angle.setPitch(MAKEANGLE(glm::degrees(getAngle(tv.x, tv.z, io->pos.x, io->pos.z))));
+			io->angle.setYaw(MAKEANGLE(glm::degrees(getAngle(tv.x, tv.z, io->pos.x, io->pos.z))));
 		} else {
 			aup->_curtime += 500;
 			ARX_PATHS_Interpolate(aup, &tv);
 			aup->_curtime -= 500;
-			io->angle.setPitch(MAKEANGLE(180.f + glm::degrees(getAngle(tv.x, tv.z, io->pos.x, io->pos.z))));
+			io->angle.setYaw(MAKEANGLE(180.f + glm::degrees(getAngle(tv.x, tv.z, io->pos.x, io->pos.z))));
 		}
 		return;
 	}
@@ -2027,10 +2027,10 @@ static void ManageNPCMovement(Entity * io)
 				io->_npcdata->look_around_inc = 0.f;
 
 				for(long n = 0; n < 4; n++) {
-					extraRotation->group_rotate[n].setPitch(extraRotation->group_rotate[n].getPitch() - extraRotation->group_rotate[n].getPitch() * (1.0f / 3));
+					extraRotation->group_rotate[n].setYaw(extraRotation->group_rotate[n].getYaw() - extraRotation->group_rotate[n].getYaw() * (1.0f / 3));
 
-					if(glm::abs(extraRotation->group_rotate[n].getPitch()) < 0.01f)
-						extraRotation->group_rotate[n].setPitch(0.f);
+					if(glm::abs(extraRotation->group_rotate[n].getYaw()) < 0.01f)
+						extraRotation->group_rotate[n].setYaw(0.f);
 				}
 			} else {
 				if(io->_npcdata->look_around_inc == 0.f) {
@@ -2039,13 +2039,13 @@ static void ManageNPCMovement(Entity * io)
 
 				for(long n = 0; n < 4; n++) {
 					float t = 1.5f - (float)n * ( 1.0f / 5 );
-					extraRotation->group_rotate[n].setPitch(extraRotation->group_rotate[n].getPitch() + io->_npcdata->look_around_inc * g_framedelay * t);
+					extraRotation->group_rotate[n].setYaw(extraRotation->group_rotate[n].getYaw() + io->_npcdata->look_around_inc * g_framedelay * t);
 				}
 
-				if(extraRotation->group_rotate[0].getPitch() > 30)
+				if(extraRotation->group_rotate[0].getYaw() > 30)
 					io->_npcdata->look_around_inc = -io->_npcdata->look_around_inc;
 
-				if(extraRotation->group_rotate[0].getPitch() < -30)
+				if(extraRotation->group_rotate[0].getYaw() < -30)
 					io->_npcdata->look_around_inc = -io->_npcdata->look_around_inc;
 			}
 		}
@@ -2054,10 +2054,10 @@ static void ManageNPCMovement(Entity * io)
 			io->_npcdata->look_around_inc = 0.f;
 
 			for(long n = 0; n < 4; n++) {
-				io->_npcdata->ex_rotate->group_rotate[n].setPitch(io->_npcdata->ex_rotate->group_rotate[n].getPitch() - io->_npcdata->ex_rotate->group_rotate[n].getPitch() * (1.0f / 3));
+				io->_npcdata->ex_rotate->group_rotate[n].setYaw(io->_npcdata->ex_rotate->group_rotate[n].getYaw() - io->_npcdata->ex_rotate->group_rotate[n].getYaw() * (1.0f / 3));
 
-				if(glm::abs(io->_npcdata->ex_rotate->group_rotate[n].getPitch()) < 0.01f)
-					io->_npcdata->ex_rotate->group_rotate[n].setPitch(0.f);
+				if(glm::abs(io->_npcdata->ex_rotate->group_rotate[n].getYaw()) < 0.01f)
+					io->_npcdata->ex_rotate->group_rotate[n].setYaw(0.f);
 			}
 		}
 	}
@@ -2615,31 +2615,31 @@ Entity * ARX_NPC_GetFirstNPCInSight(Entity * ioo)
 
 		Vec3f orgn, dest;
 
-		float ab = MAKEANGLE(ioo->angle.getPitch());
+		float ab = MAKEANGLE(ioo->angle.getYaw());
 		
 		{
-		long grp = ioo->obj->fastaccess.head_group_origin;
+		ObjVertHandle grp = ioo->obj->fastaccess.head_group_origin;
 
-		if(grp < 0) {
+		if(grp == ObjVertHandle()) {
 			orgn = ioo->pos + Vec3f(0.f, -90.f, 0.f);
 			
 			if(ioo == entities.player())
 				orgn.y = player.pos.y + 90.f;
 		} else {
-			orgn = ioo->obj->vertexlist3[grp].v;
+			orgn = ioo->obj->vertexlist3[grp.handleData()].v;
 		}
 		}
 		
 		{
-		long grp = io->obj->fastaccess.head_group_origin;
+		ObjVertHandle grp = io->obj->fastaccess.head_group_origin;
 
-		if(grp < 0) {
+		if(grp == ObjVertHandle()) {
 			dest = io->pos + Vec3f(0.f, -90.f, 0.f);
 			
 			if(io == entities.player())
 				dest.y = player.pos.y + 90.f;
 		} else {
-			dest = io->obj->vertexlist3[grp].v;
+			dest = io->obj->vertexlist3[grp.handleData()].v;
 		}
 		}
 
@@ -2741,14 +2741,14 @@ void CheckNPCEx(Entity * io) {
 		} else { // Make full visibility test
 			
 			// Retreives Head group position for "eye" pos.
-			long grp = io->obj->fastaccess.head_group_origin;
-			Vec3f orgn = io->pos - Vec3f(0.f, (grp < 0) ? 90.f : 120.f, 0.f);
+			ObjVertHandle grp = io->obj->fastaccess.head_group_origin;
+			Vec3f orgn = io->pos - Vec3f(0.f, (grp == ObjVertHandle()) ? 90.f : 120.f, 0.f);
 			Vec3f dest = player.pos + Vec3f(0.f, 90.f, 0.f);
 
 			// Check for Field of vision angle
 			float aa = getAngle(orgn.x, orgn.z, dest.x, dest.z);
 			aa = MAKEANGLE(glm::degrees(aa));
-			float ab = MAKEANGLE(io->angle.getPitch());
+			float ab = MAKEANGLE(io->angle.getYaw());
 			if(glm::abs(AngularDifference(aa, ab)) < 110.f) {
 				
 				// Check for Darkness/Stealth
@@ -2955,12 +2955,8 @@ void ManageIgnition_2(Entity * io) {
 		else
 			position = io->pos;
 
-		if(!lightHandleIsValid(io->ignit_light))
-			io->ignit_light = GetFreeDynLight();
-
-		if(lightHandleIsValid(io->ignit_light)) {
-			EERIE_LIGHT * light = lightHandleGet(io->ignit_light);
-			
+		EERIE_LIGHT * light = dynLightCreate(io->ignit_light);
+		if(light) {
 			light->intensity = std::max(io->ignition * ( 1.0f / 10 ), 1.f);
 			light->fallstart = std::max(io->ignition * 10.f, 100.f);
 			light->fallend   = std::max(io->ignition * 25.f, 240.f);

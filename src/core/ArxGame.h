@@ -67,7 +67,6 @@ protected:
 	void shutdownGame();
 	
 	void doFrame();
-	void update();
 	void render();
 
 	void manageKeyMouse();
@@ -75,9 +74,6 @@ protected:
 	void manageEditorControls();
 	void managePlayerControls();
 	void updateAllInterface();
-
-	void update2DFX();
-	void goFor2DFX();
 	
 public:
 	

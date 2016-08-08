@@ -130,7 +130,7 @@ float STARTED_ANGLE = 0;
 void Set_DragInter(Entity * io)
 {
 	if(io != DRAGINTER)
-		STARTED_ANGLE = player.angle.getPitch();
+		STARTED_ANGLE = player.angle.getYaw();
 
 	DRAGINTER = io;
 
@@ -394,9 +394,9 @@ void IO_UnlinkAllLinkedObjects(Entity * io) {
 		
 		Vec3f pos = actionPointPosition(io->obj, io->obj->linked[k].lidx);
 		
-		Vec3f vector = angleToVectorXZ(linked->angle.getPitch()) * 0.5f;
+		Vec3f vector = angleToVectorXZ(linked->angle.getYaw()) * 0.5f;
 		
-		vector.y = std::sin(glm::radians(linked->angle.getYaw()));
+		vector.y = std::sin(glm::radians(linked->angle.getPitch()));
 		
 		EERIE_PHYSICS_BOX_Launch(linked->obj, pos, linked->angle, vector);
 		
@@ -1435,7 +1435,7 @@ Entity * AddFix(const res::path & classPath, EntityInstance instance, AddInterac
 	io->spellcast_data.castingspell = SPELL_NONE;
 	
 	io->pos = player.pos;
-	io->pos += angleToVectorXZ(player.angle.getPitch()) * 140.f;
+	io->pos += angleToVectorXZ(player.angle.getYaw()) * 140.f;
 	
 	io->lastpos = io->initpos = io->pos;
 	io->lastpos.x = io->initpos.x = glm::abs(io->initpos.x / 20) * 20.f;
@@ -1491,7 +1491,7 @@ static Entity * AddCamera(const res::path & classPath, EntityInstance instance) 
 	GetIOScript(io, script);
 	
 	io->pos = player.pos;
-	io->pos += angleToVectorXZ(player.angle.getPitch()) * 140.f;
+	io->pos += angleToVectorXZ(player.angle.getYaw()) * 140.f;
 	
 	io->lastpos = io->initpos = io->pos;
 	io->lastpos.x = io->initpos.x = glm::abs(io->initpos.x / 20) * 20.f;
@@ -1543,7 +1543,7 @@ static Entity * AddMarker(const res::path & classPath, EntityInstance instance) 
 	GetIOScript(io, script);
 	
 	io->pos = player.pos;
-	io->pos += angleToVectorXZ(player.angle.getPitch()) * 140.f;
+	io->pos += angleToVectorXZ(player.angle.getYaw()) * 140.f;
 	
 	io->lastpos = io->initpos = io->pos;
 	io->lastpos.x = io->initpos.x = glm::abs(io->initpos.x / 20) * 20.f;
@@ -1676,7 +1676,7 @@ Entity * AddNPC(const res::path & classPath, EntityInstance instance, AddInterac
 	}
 	
 	io->pos = player.pos;
-	io->pos += angleToVectorXZ(player.angle.getPitch()) * 140.f;
+	io->pos += angleToVectorXZ(player.angle.getYaw()) * 140.f;
 	
 	io->lastpos = io->initpos = io->pos;
 	io->lastpos.x = io->initpos.x = glm::abs(io->initpos.x / 20) * 20.f;
@@ -1772,7 +1772,7 @@ Entity * AddItem(const res::path & classPath_, EntityInstance instance, AddInter
 	io->spellcast_data.castingspell = SPELL_NONE;
 	
 	io->pos = player.pos;
-	io->pos += angleToVectorXZ(player.angle.getPitch()) * 140.f;
+	io->pos += angleToVectorXZ(player.angle.getYaw()) * 140.f;
 	
 	io->lastpos.x = io->initpos.x = (float)((long)(io->pos.x / 20)) * 20.f;
 	io->lastpos.z = io->initpos.z = (float)((long)(io->pos.z / 20)) * 20.f;
@@ -2344,15 +2344,15 @@ void UpdateCameras() {
 					io->_camdata->cam.lasttarget = io->target;
 				}
 
-				io->_camdata->cam.angle.setPitch(io->_camdata->cam.angle.getPitch() - 180.f);
-				io->_camdata->cam.angle.setYaw(-io->_camdata->cam.angle.getYaw());
-				io->angle.setYaw(0.f);
-				io->angle.setPitch(io->_camdata->cam.angle.getPitch() + 90.f);
+				io->_camdata->cam.angle.setYaw(io->_camdata->cam.angle.getYaw() - 180.f);
+				io->_camdata->cam.angle.setPitch(-io->_camdata->cam.angle.getPitch());
+				io->angle.setPitch(0.f);
+				io->angle.setYaw(io->_camdata->cam.angle.getYaw() + 90.f);
 				io->angle.setRoll(0.f);
 			} else {
 				// no target...
 				io->target = io->pos;
-				io->target += angleToVectorXZ(io->angle.getPitch() + 90) * 20.f;
+				io->target += angleToVectorXZ(io->angle.getYaw() + 90) * 20.f;
 				
 				io->_camdata->cam.setTargetCamera(io->target);
 				io->_camdata->cam.lasttarget = io->target;
@@ -2415,9 +2415,9 @@ void UpdateInter() {
 		Anglef temp = io->angle;
 
 		if(io->ioflags & IO_NPC) {
-			temp.setPitch(MAKEANGLE(180.f - temp.getPitch()));
+			temp.setYaw(MAKEANGLE(180.f - temp.getYaw()));
 		} else {
-			temp.setPitch(MAKEANGLE(270.f - temp.getPitch()));
+			temp.setYaw(MAKEANGLE(270.f - temp.getYaw()));
 		}
 
 		if(io->animlayer[0].cur_anim) {
@@ -2468,9 +2468,9 @@ void RenderInter() {
 		Anglef temp = io->angle;
 
 		if(io->ioflags & IO_NPC) {
-			temp.setPitch(MAKEANGLE(180.f - temp.getPitch()));
+			temp.setYaw(MAKEANGLE(180.f - temp.getYaw()));
 		} else {
-			temp.setPitch(MAKEANGLE(270.f - temp.getPitch()));
+			temp.setYaw(MAKEANGLE(270.f - temp.getYaw()));
 		}
 
 		if(io->animlayer[0].cur_anim) {

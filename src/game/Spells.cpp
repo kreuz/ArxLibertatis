@@ -137,7 +137,7 @@ bool GLOBAL_MAGIC_MODE = true;
 short ARX_FLARES_broken(1);
 
 long snip=0;
-static Vec2s g_LastFlarePosition;
+static Vec2f g_LastFlarePosition;
 static ArxInstant g_LastFlareTime;
 
 unsigned char ucFlick=0;
@@ -543,9 +543,9 @@ void ARX_SPELLS_ManageMagic() {
 			}
 			
 			if(eeMousePressed1()) {
-				Vec2s pos = DANAEMouse;
+				Vec2f pos = Vec2f(DANAEMouse);
 				if(TRUE_PLAYER_MOUSELOOK_ON) {
-					pos = MemoMouse;
+					pos = Vec2f(MemoMouse);
 				}
 				
 				ArxInstant now = arxtime.now();
@@ -559,7 +559,7 @@ void ARX_SPELLS_ManageMagic() {
 				
 				if(now - g_LastFlareTime >= interval) {
 					
-					if(glm::distance(Vec2f(pos), Vec2f(g_LastFlarePosition)) > 14 * g_sizeRatio.y) {
+					if(glm::distance(pos, g_LastFlarePosition) > 14 * g_sizeRatio.y) {
 						FlareLine(g_LastFlarePosition, pos);
 						g_LastFlarePosition = pos;
 					}
@@ -641,7 +641,7 @@ static bool CanPayMana(SpellBase * spell, float cost, bool _bSound = true) {
 	if(spell->m_flags & SPELLCAST_FLAG_NOMANA)
 		return true;
 
-	if(spell->m_caster == PlayerEntityHandle) {
+	if(spell->m_caster == EntityHandle_Player) {
 		if(player.manaPool.current < cost) {
 			ARX_SPELLS_Fizzle(spell);
 
@@ -671,7 +671,7 @@ static bool CanPayMana(SpellBase * spell, float cost, bool _bSound = true) {
 static EntityHandle TemporaryGetSpellTarget(const Vec3f & from) {
 	
 	float mindist = std::numeric_limits<float>::max();
-	EntityHandle found = PlayerEntityHandle;
+	EntityHandle found = EntityHandle_Player;
 	for(size_t i = 1; i < entities.size(); i++) {
 		const EntityHandle handle = EntityHandle(i);
 		Entity * e = entities[handle];
@@ -709,7 +709,7 @@ void ARX_SPELLS_CancelSpellTarget() {
 void ARX_SPELLS_LaunchSpellTarget(Entity * io) {
 	if(io) {
 		ARX_SPELLS_Launch(t_spell.typ,
-		                  PlayerEntityHandle,
+		                  EntityHandle_Player,
 		                  t_spell.flags,
 		                  t_spell.level,
 		                  io->index(),
@@ -900,7 +900,7 @@ bool ARX_SPELLS_Launch(SpellType typ, EntityHandle source, SpellcastFlags flags,
 		level = std::max(level, 15L);
 	}
 	
-	if(   source == PlayerEntityHandle
+	if(   source == EntityHandle_Player
 	   && !(flags & SPELLCAST_FLAG_NOCHECKCANCAST)
 	) {
 		for(size_t i = 0; i < MAX_SPELL_SYMBOLS; i++) {
@@ -917,7 +917,7 @@ bool ARX_SPELLS_Launch(SpellType typ, EntityHandle source, SpellcastFlags flags,
 	
 	float playerSpellLevel = 0;
 	
-	if(source == PlayerEntityHandle) {
+	if(source == EntityHandle_Player) {
 		ARX_SPELLS_ResetRecognition();
 
 		if(player.SpellToMemorize.bSpell) {
@@ -951,7 +951,7 @@ bool ARX_SPELLS_Launch(SpellType typ, EntityHandle source, SpellcastFlags flags,
 		return true;
 	}
 	
-	if(target == EntityHandle() && source == PlayerEntityHandle)
+	if(target == EntityHandle() && source == EntityHandle_Player)
 	switch(typ) {
 		case SPELL_LOWER_ARMOR:
 		case SPELL_CURSE:
@@ -1022,7 +1022,7 @@ bool ARX_SPELLS_Launch(SpellType typ, EntityHandle source, SpellcastFlags flags,
 		default: break;
 	}
 
-	if(source == PlayerEntityHandle) {
+	if(source == EntityHandle_Player) {
 		ARX_SPELLS_CancelSpellTarget();
 	}
 
@@ -1048,7 +1048,7 @@ bool ARX_SPELLS_Launch(SpellType typ, EntityHandle source, SpellcastFlags flags,
 	
 	float spellLevel;
 	
-	if(source == PlayerEntityHandle) {
+	if(source == EntityHandle_Player) {
 		// Player source
 		spellLevel = playerSpellLevel; // Level of caster
 	} else {

@@ -385,7 +385,7 @@ void AddRandomSmoke(Entity * io, long amount) {
 }
 
 // flag 1 = randomize pos
-void ARX_PARTICLES_Add_Smoke(const Vec3f & pos, long flags, long amount, Color3f * rgb) {
+void ARX_PARTICLES_Add_Smoke(const Vec3f & pos, long flags, long amount, const Color3f & rgb) {
 	
 	Vec3f mod = (flags & 1) ? randomVec(-50.f, 50.f) : Vec3f_ZERO;
 	
@@ -408,7 +408,7 @@ void ARX_PARTICLES_Add_Smoke(const Vec3f & pos, long flags, long amount, Color3f
 		pd->tolive = Random::getu(1100, 1500);
 		pd->delay = amount * 120 + Random::getu(0, 100);
 		pd->move = Vec3f(Random::getf(-0.25f, 0.25f), Random::getf(-0.7f, 0.3f), Random::getf(-0.25f, 0.25f));
-		pd->rgb = (rgb) ? *rgb : Color3f(0.3f, 0.3f, 0.34f);
+		pd->rgb = rgb;
 		pd->tc = smokeparticle;
 		pd->m_rotation = 0.01f;
 	}
@@ -462,9 +462,9 @@ void ManageTorch() {
 	}
 	
 	if(   entities.player()->obj
-	   && entities.player()->obj->fastaccess.head_group_origin > -1
+	   && entities.player()->obj->fastaccess.head_group_origin != ObjVertHandle()
 	) {
-		short vertex = entities.player()->obj->fastaccess.head_group_origin;
+		s32 vertex = entities.player()->obj->fastaccess.head_group_origin.handleData();
 		el->pos.y = entities.player()->obj->vertexlist3[vertex].v.y;
 	}
 }
@@ -883,7 +883,7 @@ void ARX_PARTICLES_Update(EERIE_CAMERA * cam)  {
 			if(part->m_flags & SPLAT_GROUND) {
 				float siz = part->siz + part->scale.x * fd;
 				sp.radius = siz * 10.f;
-				if(CheckAnythingInSphere(sp, PlayerEntityHandle, CAS_NO_NPC_COL)) {
+				if(CheckAnythingInSphere(sp, EntityHandle_Player, CAS_NO_NPC_COL)) {
 					if(Random::getf() < 0.9f) {
 						Color3f rgb = part->rgb;
 						PolyBoomAddSplat(sp, rgb, 0);
@@ -897,7 +897,7 @@ void ARX_PARTICLES_Update(EERIE_CAMERA * cam)  {
 			if(part->m_flags & SPLAT_WATER) {
 				float siz = part->siz + part->scale.x * fd;
 				sp.radius = siz * Random::getf(10.f, 30.f);
-				if(CheckAnythingInSphere(sp, PlayerEntityHandle, CAS_NO_NPC_COL)) {
+				if(CheckAnythingInSphere(sp, EntityHandle_Player, CAS_NO_NPC_COL)) {
 					if(Random::getf() < 0.9f) {
 						Color3f rgb = part->rgb * 0.5f;
 						PolyBoomAddSplat(sp, rgb, 2);
@@ -982,11 +982,11 @@ void ARX_PARTICLES_Update(EERIE_CAMERA * cam)  {
 }
 
 void RestoreAllLightsInitialStatus() {
-	for(size_t i = 0; i < MAX_LIGHTS; i++) {
-		if(GLight[i]) {
-			GLight[i]->m_ignitionStatus = !(GLight[i]->extras & EXTRAS_STARTEXTINGUISHED);
-			if(!GLight[i]->m_ignitionStatus) {
-				lightHandleDestroy(GLight[i]->m_ignitionLightHandle);
+	for(size_t i = 0; i < g_staticLightsMax; i++) {
+		if(g_staticLights[i]) {
+			g_staticLights[i]->m_ignitionStatus = !(g_staticLights[i]->extras & EXTRAS_STARTEXTINGUISHED);
+			if(!g_staticLights[i]->m_ignitionStatus) {
+				lightHandleDestroy(g_staticLights[i]->m_ignitionLightHandle);
 			}
 		}
 	}
@@ -999,9 +999,9 @@ void TreatBackgroundActions() {
 	
 	float fZFar = square(ACTIVECAM->cdepth * fZFogEnd * 1.3f);
 	
-	for(size_t i = 0; i < MAX_LIGHTS; i++) {
+	for(size_t i = 0; i < g_staticLightsMax; i++) {
 		
-		EERIE_LIGHT * gl = GLight[i];
+		EERIE_LIGHT * gl = g_staticLights[i];
 		if(!gl) {
 			continue;
 		}

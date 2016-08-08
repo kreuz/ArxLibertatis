@@ -144,14 +144,11 @@ void ARX_SPELLS_UpdateSymbolDraw() {
 		}
 
 		if(io->flarecount) {
-			if(!lightHandleIsValid(io->dynlight))
-				io->dynlight = GetFreeDynLight();
-
-			if(lightHandleIsValid(io->dynlight)) {
-				EERIE_LIGHT * light = lightHandleGet(io->dynlight);
-				
+			
+			EERIE_LIGHT * light = dynLightCreate(io->dynlight);
+			if(light) {
 				light->pos = io->pos;
-				light->pos += angleToVectorXZ(io->angle.getPitch() - 45.f) * 60.f;
+				light->pos += angleToVectorXZ(io->angle.getYaw() - 45.f) * 60.f;
 				light->pos += Vec3f(0.f, -120.f, 0.f);
 				
 				float rr = Random::getf();
@@ -162,9 +159,8 @@ void ARX_SPELLS_UpdateSymbolDraw() {
 				light->rgb.g=0.009f*io->flarecount*2;
 				light->rgb.b=0.008f*io->flarecount*2;
 			}
-		} else if(lightHandleIsValid(io->dynlight)) {
-			lightHandleGet(io->dynlight)->exist = 0;
-			io->dynlight = LightHandle();
+		} else {
+			lightHandleDestroy(io->dynlight);
 		}
 
 		if(io->symboldraw) {
@@ -235,8 +231,8 @@ void ARX_SPELLS_UpdateSymbolDraw() {
 					if(newtime <= ti) {
 						float ratio = float(newtime) * div_ti;
 						pos1 += Vec2s(Vec2f(vect) * ratio);
-						AddFlare(pos1, 0.1f, 1, entities[handle]);
-						FlareLine(old_pos, pos1, entities[handle]);
+						AddFlare(Vec2f(pos1), 0.1f, 1, entities[handle]);
+						FlareLine(Vec2f(old_pos), Vec2f(pos1), entities[handle]);
 						break;
 					}
 
@@ -269,7 +265,7 @@ void ARX_SPELLS_UpdateSymbolDraw() {
 						
 						pos1 += Vec2s(Vec2f(ratio) * Vec2f(vect) * 0.5f);
 						
-						Vec2s pos = Vec2s(Vec2f(pos1) * g_sizeRatio);
+						Vec2f pos = Vec2f(pos1) * g_sizeRatio;
 						AddFlare(pos, 0.1f, 1, entities[handle], true);
 
 						break;
@@ -308,7 +304,7 @@ static void ARX_SPELLS_RequestSymbolDrawCommon(Entity * io, float duration,
 	sd->starttime = arxtime.now();
 	sd->lastElapsed = 0;
 	
-	float tmpAngle = io->angle.getPitch() - 45.0F + info.startOffset.x * 2;
+	float tmpAngle = io->angle.getYaw() - 45.0F + info.startOffset.x * 2;
 	
 	sd->lastpos = io->pos;
 	sd->lastpos += angleToVectorXZ(tmpAngle) * 60.f;

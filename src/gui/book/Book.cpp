@@ -293,13 +293,13 @@ static void RenderBookPlayerCharacter() {
 	RecalcLight(&eLight2);
 	
 	EERIE_LIGHT * SavePDL[2];
-	SavePDL[0] = PDL[0];
-	SavePDL[1] = PDL[1];
-	size_t iSavePDL = TOTPDL;
+	SavePDL[0] = g_culledDynamicLights[0];
+	SavePDL[1] = g_culledDynamicLights[1];
+	size_t iSavePDL = g_culledDynamicLightsCount;
 	
-	PDL[0] = &eLight1;
-	PDL[1] = &eLight2;
-	TOTPDL = 2;
+	g_culledDynamicLights[0] = &eLight1;
+	g_culledDynamicLights[1] = &eLight2;
+	g_culledDynamicLightsCount = 2;
 	
 	EERIE_CAMERA * oldcam = ACTIVECAM;
 	bookcam.center = rec.center();
@@ -318,16 +318,16 @@ static void RenderBookPlayerCharacter() {
 		
 		switch(player.skin) {
 			case 0:
-				ePlayerAngle.setPitch(-25.f);
+				ePlayerAngle.setYaw(-25.f);
 				break;
 			case 1:
-				ePlayerAngle.setPitch(-10.f);
+				ePlayerAngle.setYaw(-10.f);
 				break;
 			case 2:
-				ePlayerAngle.setPitch(20.f);
+				ePlayerAngle.setYaw(20.f);
 				break;
 			case 3:
-				ePlayerAngle.setPitch(35.f);
+				ePlayerAngle.setYaw(35.f);
 				break;
 		}
 		
@@ -336,7 +336,7 @@ static void RenderBookPlayerCharacter() {
 	} else {
 		GRenderer->SetScissor(rec);
 		
-		ePlayerAngle.setPitch(-20.f);
+		ePlayerAngle.setYaw(-20.f);
 		pos = Vec3f(20.f, 96.f, 260.f);
 		
 		ARX_EQUIPMENT_AttachPlayerWeaponToHand();
@@ -378,9 +378,9 @@ static void RenderBookPlayerCharacter() {
 		GRenderer->SetRenderState(Renderer::DepthTest, false);
 	}
 	
-	PDL[0] = SavePDL[0];
-	PDL[1] = SavePDL[1];
-	TOTPDL = iSavePDL;
+	g_culledDynamicLights[0] = SavePDL[0];
+	g_culledDynamicLights[1] = SavePDL[1];
+	g_culledDynamicLightsCount = iSavePDL;
 	
 	entities.player()->obj->vertexlist3 = vertexlist;
 	vertexlist.clear();

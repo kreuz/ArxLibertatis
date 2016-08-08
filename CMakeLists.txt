@@ -94,6 +94,8 @@ suboption(DEBUG "Build with debug output" BOOL ${default_DEBUG})
 if(DEBUG)
 	add_definitions(-DARX_DEBUG=1)
 endif()
+suboption(DEBUG_GL "Enable OpenGL debug output by default" BOOL ${DEBUG})
+set(ARX_DEBUG_GL ${DEBUG_GL})
 
 # Static libs
 set(default_USE_STATIC_LIBS OFF)
@@ -761,6 +763,7 @@ set(GAME_SOURCES
 	src/game/Player.cpp
 	src/game/Spells.cpp
 	src/game/effect/Quake.cpp
+	src/game/effect/ParticleSystems.cpp
 	src/game/magic/Precast.cpp
 	src/game/magic/Rune.cpp
 	src/game/magic/RuneDraw.cpp
@@ -804,6 +807,7 @@ set(GRAPHICS_SOURCES
 	src/graphics/effects/Fog.cpp
 	src/graphics/effects/SpellEffects.cpp
 	src/graphics/effects/Halo.cpp
+	src/graphics/effects/LightFlare.cpp
 	src/graphics/effects/Lightning.cpp
 	src/graphics/effects/MagicMissile.cpp
 	src/graphics/effects/PolyBoom.cpp

@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2012 Arx Libertatis Team (see the AUTHORS file)
+ * Copyright 2016 Arx Libertatis Team (see the AUTHORS file)
  *
  * This file is part of Arx Libertatis.
  *
@@ -17,22 +17,10 @@
  * along with Arx Libertatis.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef ARX_CINEMATIC_CINEMATICCONTROLLER_H
-#define ARX_CINEMATIC_CINEMATICCONTROLLER_H
+#ifndef ARX_GRAPHICS_EFFECTS_LIGHTFLARE_H
+#define ARX_GRAPHICS_EFFECTS_LIGHTFLARE_H
 
-#include <string>
+void update2DFX();
+void goFor2DFX();
 
-void cinematicPrepare(std::string name, bool preload);
-
-void cinematicRequestStart();
-
-void cinematicKill();
-
-void cinematicLaunchWaiting();
-
-bool cinematicIsStopped();
-
-bool isInCinematic();
-void cinematicRender();
-
-#endif // ARX_CINEMATIC_CINEMATICCONTROLLER_H
+#endif // ARX_GRAPHICS_EFFECTS_LIGHTFLARE_H

@@ -67,9 +67,10 @@ class TextureContainer;
 class Entity;
 struct EERIE_LIGHT;
 
-ARX_HANDLE_TYPEDEF(long, ActionPoint, -1)
-ARX_HANDLE_TYPEDEF(long, ObjSelection, -1)
-ARX_HANDLE_TYPEDEF(short, ObjVertGroup, -1)
+typedef HandleType<struct ActionPointTag,  long,  -1> ActionPoint;
+typedef HandleType<struct ObjSelectionTag, long,  -1> ObjSelection;
+typedef HandleType<struct ObjVertGroupTag, short, -1> ObjVertGroup;
+typedef HandleType<struct ObjVertHandleTag, s32,  -1> ObjVertHandle;
 
 struct EERIE_TRI {
 	Vec3f v[3];
@@ -307,7 +308,7 @@ struct EERIE_FASTACCESS
 		, left_attach()
 		, weapon_attach()
 		, secondary_attach()
-		, head_group_origin(0)
+		, head_group_origin()
 		, head_group()
 		, fire()
 		, sel_head()
@@ -320,7 +321,7 @@ struct EERIE_FASTACCESS
 	ActionPoint left_attach;
 	ActionPoint weapon_attach;
 	ActionPoint secondary_attach;
-	long head_group_origin;
+	ObjVertHandle head_group_origin;
 	ObjVertGroup head_group;
 	ActionPoint fire;
 	ObjSelection sel_head;

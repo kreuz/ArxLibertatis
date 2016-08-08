@@ -56,6 +56,7 @@ ZeniMax Media Inc., Suite 120, Rockville, Maryland 20850 USA.
 #include "game/EntityManager.h"
 #include "game/Player.h"
 #include "game/Spells.h"
+#include "game/effect/ParticleSystems.h"
 
 #include "graphics/Math.h"
 #include "graphics/data/TextureContainer.h"
@@ -80,38 +81,8 @@ static void LaunchPoisonExplosion(const Vec3f & aePos) {
 	
 	// système de partoches pour l'explosion
 	ParticleSystem * pPS = new ParticleSystem();
-	ParticleParams cp = ParticleParams();
-	cp.m_nbMax = 80; 
-	cp.m_life = 1500;
-	cp.m_lifeRandom = 500;
-	cp.m_pos = Vec3f(5);
-	cp.m_direction = Vec3f(0.f, 1.f, 0.f);
-	cp.m_angle = glm::radians(360.f);
-	cp.m_speed = 200;
-	cp.m_speedRandom = 0;
-	cp.m_gravity = Vec3f(0, 17, 0);
-	cp.m_flash = 0;
-	cp.m_rotation = 1.0f / (101 - 80);
-	cp.m_rotationRandomDirection = true;
-	cp.m_rotationRandomStart = true;
-
-	cp.m_startSegment.m_size = 5;
-	cp.m_startSegment.m_sizeRandom = 3;
-	cp.m_startSegment.m_color = Color(0, 76, 0, 0).to<float>();
-	cp.m_startSegment.m_colorRandom = Color(0, 0, 0, 150).to<float>();
-
-	cp.m_endSegment.m_size = 30;
-	cp.m_endSegment.m_sizeRandom = 5;
-	cp.m_endSegment.m_color = Color(0, 0, 0, 0).to<float>();
-	cp.m_endSegment.m_colorRandom = Color(0, 25, 0, 20).to<float>();
-
-	cp.m_blendMode = RenderMaterial::AlphaAdditive;
-	cp.m_freq = -1;
-	cp.m_texture.set("graph/particles/big_greypouf", 0, 200);
-	cp.m_spawnFlags = 0;
-	cp.m_looping = false;
 	
-	pPS->SetParams(cp);
+	pPS->SetParams(g_particleParameters[ParticleParam_Poison1]);
 	pPS->SetPos(aePos);
 	pPS->Update(0);
 
@@ -175,40 +146,11 @@ void CPoisonProjectile::Create(Vec3f _eSrc, float _fBeta)
 	Split(pathways, 0, 9, Vec3f(10 * fBetaRadCos, 10, 10 * fBetaRadSin));
 	
 	fTrail = -1;
-
-	//-------------------------------------------------------------------------
-	// système de partoches
-	ParticleParams cp = ParticleParams();
-	cp.m_nbMax = 5;
-	cp.m_life = 2000;
-	cp.m_lifeRandom = 1000;
-	cp.m_pos = Vec3f_ZERO;
-	cp.m_direction = -eMove * 0.1f;
-	cp.m_angle = 0;
-	cp.m_speed = 10;
-	cp.m_speedRandom = 10;
-	cp.m_gravity = Vec3f_ZERO;
-	cp.m_flash = 21 * (1.f/100);
-	cp.m_rotation = 1.0f / (101 - 80);
-	cp.m_rotationRandomDirection = true;
-	cp.m_rotationRandomStart = true;
-
-	cp.m_startSegment.m_size = 5;
-	cp.m_startSegment.m_sizeRandom = 3;
-	cp.m_startSegment.m_color = Color(0, 50, 0, 40).to<float>();
-	cp.m_startSegment.m_colorRandom = Color(0, 100, 0, 50).to<float>();
-
-	cp.m_endSegment.m_size = 8;
-	cp.m_endSegment.m_sizeRandom = 13;
-	cp.m_endSegment.m_color = Color(0, 60, 0, 40).to<float>();
-	cp.m_endSegment.m_colorRandom = Color(0, 100, 0, 50).to<float>();
-
-	cp.m_blendMode = RenderMaterial::Screen;
-	cp.m_freq = -1;
-	cp.m_texture.set("graph/particles/big_greypouf", 0, 200);
-	cp.m_spawnFlags = 0;
 	
-	pPS.SetParams(cp);
+	ParticleParams pp = g_particleParameters[ParticleParam_Poison2];
+	pp.m_direction *= -eMove;
+	
+	pPS.SetParams(pp);
 	pPS.SetPos(eSrc);
 	pPS.Update(0);
 }
@@ -226,41 +168,13 @@ void CPoisonProjectile::Update(ArxDuration timeDelta)
 	} else {
 		if(!bOk) {
 			bOk = true;
-
 			// go
-			ParticleParams cp = ParticleParams();
-			cp.m_nbMax = 100;
-			cp.m_life = 500;
-			cp.m_lifeRandom = 300;
-			cp.m_pos = Vec3f(fBetaRadSin * 20, 0.f, fBetaRadCos * 20);
-
-			cp.m_direction = -eMove * 0.1f;
-
-			cp.m_angle = glm::radians(4.f);
-			cp.m_speed = 150;
-			cp.m_speedRandom = 50;//15;
-			cp.m_gravity = Vec3f(0, 10, 0);
-			cp.m_flash = 0;
-			cp.m_rotation = 1.0f / (101 - 80);
-			cp.m_rotationRandomDirection = true;
-			cp.m_rotationRandomStart = true;
-
-			cp.m_startSegment.m_size = 2;
-			cp.m_startSegment.m_sizeRandom = 2;
-			cp.m_startSegment.m_color = Color(0, 39, 0, 100).to<float>();
-			cp.m_startSegment.m_colorRandom = Color(50, 21, 0, 0).to<float>();
-
-			cp.m_endSegment.m_size = 7;
-			cp.m_endSegment.m_sizeRandom = 5;
-			cp.m_endSegment.m_color = Color(0, 25, 0, 100).to<float>();
-			cp.m_endSegment.m_colorRandom = Color(50, 20, 0, 0).to<float>();
-
-			cp.m_blendMode = RenderMaterial::Screen;
-			cp.m_freq = 80;
-			cp.m_texture.set("graph/particles/big_greypouf", 0, 200);
-			cp.m_spawnFlags = 0;
 			
-			pPSStream.SetParams(cp);
+			ParticleParams pp = g_particleParameters[ParticleParam_Poison3];
+			pp.m_pos = Vec3f(fBetaRadSin * 20, 0.f, fBetaRadCos * 20);
+			pp.m_direction = -eMove * 0.1f;
+			
+			pPSStream.SetParams(pp);
 		}
 
 		pPSStream.Update(timeDelta);

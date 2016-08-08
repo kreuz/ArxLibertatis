@@ -49,8 +49,8 @@ void InvisibilitySpell::Launch()
 	m_hasDuration = true;
 	m_fManaCostPerSecond = 3.f;
 	
-	if(m_caster == PlayerEntityHandle) {
-		m_target = PlayerEntityHandle;
+	if(m_caster == EntityHandle_Player) {
+		m_target = EntityHandle_Player;
 	}
 
 	entities[m_target]->gameFlags |= GFLAG_INVISIBILITY;
@@ -72,7 +72,7 @@ void InvisibilitySpell::End()
 
 void InvisibilitySpell::Update() {
 	
-	if(m_target != PlayerEntityHandle) {
+	if(m_target != EntityHandle_Player) {
 		if(!(entities[m_target]->gameFlags & GFLAG_INVISIBILITY)) {
 			m_targets.clear();
 			ARX_SPELLS_Fizzle(this);
@@ -88,7 +88,7 @@ Vec3f InvisibilitySpell::getPosition() {
 ManaDrainSpell::ManaDrainSpell()
 	: m_light()
 	, m_damage()
-	, m_pitch(0.f)
+	, m_yaw(0.f)
 {
 	
 }
@@ -119,10 +119,8 @@ void ManaDrainSpell::Launch()
 	damage.type = DAMAGE_TYPE_FAKEFIRE | DAMAGE_TYPE_MAGICAL | DAMAGE_TYPE_DRAIN_MANA;
 	m_damage = DamageCreate(damage);
 	
-	m_light = GetFreeDynLight();
-	if(lightHandleIsValid(m_light)) {
-		EERIE_LIGHT * light = lightHandleGet(m_light);
-		
+	EERIE_LIGHT * light = dynLightCreate(m_light);
+	if(light) {
 		light->intensity = 2.3f;
 		light->fallend = 700.f;
 		light->fallstart = 500.f;
@@ -147,7 +145,7 @@ void ManaDrainSpell::Update() {
 	float refpos;
 	float scaley;
 	
-	if(m_caster == PlayerEntityHandle)
+	if(m_caster == EntityHandle_Player)
 		scaley = 90.f;
 	else
 		scaley = glm::abs(entities[m_caster]->physics.cyl.height * (1.0f/2)) + 30.f;
@@ -157,7 +155,7 @@ void ManaDrainSpell::Update() {
 	float mov = std::sin(frametime * (1.0f/800)) * scaley;
 	
 	Vec3f cabalpos;
-	if(m_caster == PlayerEntityHandle) {
+	if(m_caster == EntityHandle_Player) {
 		cabalpos.x = player.pos.x;
 		cabalpos.y = player.pos.y + 60.f - mov;
 		cabalpos.z = player.pos.z;
@@ -171,9 +169,8 @@ void ManaDrainSpell::Update() {
 	
 	float Es = std::sin(frametime * (1.0f/800) + glm::radians(scaley));
 	
-	if(lightHandleIsValid(m_light)) {
-		EERIE_LIGHT * light = lightHandleGet(m_light);
-		
+	EERIE_LIGHT * light = lightHandleGet(m_light);
+	if(light) {
 		light->pos.x = cabalpos.x;
 		light->pos.y = refpos;
 		light->pos.z = cabalpos.z;
@@ -187,8 +184,8 @@ void ManaDrainSpell::Update() {
 	mat.setBlendType(RenderMaterial::Additive);
 	
 	Anglef cabalangle(0.f, 0.f, 0.f);
-	cabalangle.setPitch(m_pitch + g_framedelay * 0.1f);
-	m_pitch = cabalangle.getPitch();
+	cabalangle.setYaw(m_yaw + g_framedelay * 0.1f);
+	m_yaw = cabalangle.getYaw();
 	
 	Vec3f cabalscale = Vec3f(Es);
 	Color3f cabalcolor = Color3f(0.4f, 0.4f, 0.8f);
@@ -209,7 +206,7 @@ void ManaDrainSpell::Update() {
 	cabalcolor = Color3f(0.f, 0.f, 0.15f);
 	Draw3DObject(cabal, cabalangle, cabalpos, cabalscale, cabalcolor, mat);
 	
-	cabalangle.setPitch(-cabalangle.getPitch());
+	cabalangle.setYaw(-cabalangle.getYaw());
 	cabalpos.y = refpos - mov;
 	cabalscale = Vec3f(Es);
 	cabalcolor = Color3f(0.f, 0.f, 0.15f);
@@ -230,7 +227,7 @@ void ManaDrainSpell::Update() {
 	cabalcolor = Color3f(0.4f, 0.4f, 0.8f);
 	Draw3DObject(cabal, cabalangle, cabalpos, cabalscale, cabalcolor, mat);
 	
-	cabalangle.setPitch(-cabalangle.getPitch());
+	cabalangle.setYaw(-cabalangle.getYaw());
 	
 	ARX_SOUND_RefreshPosition(m_snd_loop, cabalpos);
 }
@@ -253,7 +250,7 @@ void ExplosionSpell::Launch()
 	m_duration = ArxDurationMs(2000);
 	
 	Vec3f target = entities[m_caster]->pos;
-	if(m_caster == PlayerEntityHandle) {
+	if(m_caster == EntityHandle_Player) {
 		target.y += 60.f;
 	} else {
 		target.y -= 60.f;
@@ -270,10 +267,8 @@ void ExplosionSpell::Launch()
 	damage.pos = target;
 	m_damage = DamageCreate(damage);
 	
-	m_light = GetFreeDynLight();
-	if(lightHandleIsValid(m_light)) {
-		EERIE_LIGHT * light = lightHandleGet(m_light);
-		
+	EERIE_LIGHT * light = dynLightCreate(m_light);
+	if(light) {
 		light->intensity = 2.3f;
 		light->fallend = 700.f;
 		light->fallstart = 500.f;
@@ -300,12 +295,8 @@ void ExplosionSpell::Launch()
 
 void ExplosionSpell::Update() {
 	
-	if(!lightHandleIsValid(m_light))
-		m_light = GetFreeDynLight();
-
-	if(lightHandleIsValid(m_light)) {
-		EERIE_LIGHT * light = lightHandleGet(m_light);
-		
+	EERIE_LIGHT * light = dynLightCreate(m_light);
+	if(light) {
 		light->rgb = Color3f(0.1f, 0.1f, 0.8f) + randomColor3f() * Color3f(1.f/3, 1.f/3, 1.f/5);
 		light->duration = ArxDurationMs(200);
 		
@@ -347,7 +338,7 @@ void EnchantWeaponSpell::Update() {
 LifeDrainSpell::LifeDrainSpell()
 	: m_light()
 	, m_damage()
-	, m_pitch(0.f)
+	, m_yaw(0.f)
 {
 }
 
@@ -377,10 +368,8 @@ void LifeDrainSpell::Launch()
 	damage.type = DAMAGE_TYPE_FAKEFIRE | DAMAGE_TYPE_MAGICAL | DAMAGE_TYPE_DRAIN_LIFE;
 	m_damage = DamageCreate(damage);
 	
-	m_light = GetFreeDynLight();
-	if(lightHandleIsValid(m_light)) {
-		EERIE_LIGHT * light = lightHandleGet(m_light);
-		
+	EERIE_LIGHT * light = dynLightCreate(m_light);
+	if(light) {
 		light->intensity = 2.3f;
 		light->fallend = 700.f;
 		light->fallstart = 500.f;
@@ -405,7 +394,7 @@ void LifeDrainSpell::Update() {
 	float refpos;
 	float scaley;
 	
-	if(m_caster == PlayerEntityHandle)
+	if(m_caster == EntityHandle_Player)
 		scaley = 90.f;
 	else
 		scaley = glm::abs(entities[m_caster]->physics.cyl.height * (1.0f/2)) + 30.f;
@@ -415,7 +404,7 @@ void LifeDrainSpell::Update() {
 	float mov = std::sin(frametime * (1.0f/800)) * scaley;
 	
 	Vec3f cabalpos;
-	if(m_caster == PlayerEntityHandle) {
+	if(m_caster == EntityHandle_Player) {
 		cabalpos.x = player.pos.x;
 		cabalpos.y = player.pos.y + 60.f - mov;
 		cabalpos.z = player.pos.z;
@@ -429,9 +418,8 @@ void LifeDrainSpell::Update() {
 	
 	float Es = std::sin(frametime * (1.0f/800) + glm::radians(scaley));
 	
-	if(lightHandleIsValid(m_light)) {
-		EERIE_LIGHT * light = lightHandleGet(m_light);
-		
+	EERIE_LIGHT * light = lightHandleGet(m_light);
+	if(light) {
 		light->pos.x = cabalpos.x;
 		light->pos.y = refpos;
 		light->pos.z = cabalpos.z;
@@ -445,8 +433,8 @@ void LifeDrainSpell::Update() {
 	mat.setBlendType(RenderMaterial::Additive);
 	
 	Anglef cabalangle(0.f, 0.f, 0.f);
-	cabalangle.setPitch(m_pitch + g_framedelay * 0.1f);
-	m_pitch = cabalangle.getPitch();
+	cabalangle.setYaw(m_yaw + g_framedelay * 0.1f);
+	m_yaw = cabalangle.getYaw();
 	
 	Vec3f cabalscale = Vec3f(Es);
 	Color3f cabalcolor = Color3f(0.8f, 0.f, 0.f);
@@ -467,7 +455,7 @@ void LifeDrainSpell::Update() {
 	cabalcolor = Color3f(0.15f, 0.f, 0.f);
 	Draw3DObject(cabal, cabalangle, cabalpos, cabalscale, cabalcolor, mat);
 	
-	cabalangle.setPitch(-cabalangle.getPitch());
+	cabalangle.setYaw(-cabalangle.getYaw());
 	cabalpos.y = refpos - mov;
 	cabalscale = Vec3f(Es);
 	cabalcolor = Color3f(0.15f, 0.f, 0.f);
@@ -488,7 +476,7 @@ void LifeDrainSpell::Update() {
 	cabalcolor = Color3f(0.8f, 0.f, 0.f);
 	Draw3DObject(cabal, cabalangle, cabalpos, cabalscale, cabalcolor, mat);
 	
-	cabalangle.setPitch(-cabalangle.getPitch());
+	cabalangle.setYaw(-cabalangle.getYaw());
 	
 	ARX_SOUND_RefreshPosition(m_snd_loop, cabalpos);
 }

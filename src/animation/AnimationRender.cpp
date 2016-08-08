@@ -357,11 +357,9 @@ void Cedric_ApplyLightingFirstPartRefactor(Entity *io) {
 							sp.origin = io->pos + randomVec3f() * Vec3f(200.f, 20.f,200.f) - Vec3f(100.f, 10.f, 100.f);
 							sp.radius = Random::getf(100.f, 200.f);
 						}
-
-						LightHandle nn = GetFreeDynLight();
-						if(lightHandleIsValid(nn)) {
-							EERIE_LIGHT * light = lightHandleGet(nn);
-							
+						
+						EERIE_LIGHT * light = dynLightCreate();
+						if(light) {
 							light->intensity = Random::getf(0.7f, 2.7f);
 							light->fallend = 600.f;
 							light->fallstart = 400.f;
@@ -1198,8 +1196,8 @@ static void Cedric_AnimateDrawEntityRender(EERIE_3DOBJ * eobj, const Vec3f & pos
 	/* Get nearest lights */
 	Vec3f tv = pos;
 
-	if(io && io->obj->fastaccess.view_attach != ActionPoint() && io->obj->fastaccess.head_group_origin != -1)
-		tv.y = io->obj->vertexlist3[io->obj->fastaccess.head_group_origin].v.y + 10;
+	if(io && io->obj->fastaccess.head_group_origin != ObjVertHandle())
+		tv.y = io->obj->vertexlist3[io->obj->fastaccess.head_group_origin.handleData()].v.y + 10;
 	else
 		tv.y -= 90.f;
 
@@ -1281,18 +1279,16 @@ static void StoreEntityMovement(Entity * io, Vec3f & ftr, float scale) {
 	
 	arx_assert(isallfinite(ftr));
 	
-	Vec3f ftr2 = Vec3f_ZERO;
-
 	ftr *= scale;
 
 	float temp;
 	if (io == entities.player()) {
-		temp = MAKEANGLE(180.f - player.angle.getPitch());
+		temp = MAKEANGLE(180.f - player.angle.getYaw());
 	} else {
-		temp = MAKEANGLE(180.f - io->angle.getPitch());
+		temp = MAKEANGLE(180.f - io->angle.getYaw());
 	}
 
-	ftr2 = VRotateY(ftr, temp);
+	Vec3f ftr2 = VRotateY(ftr, temp);
 
 	// stores Translations for a later use
 	io->move = ftr2;

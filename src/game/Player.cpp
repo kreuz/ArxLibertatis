@@ -157,7 +157,7 @@ bool BLOCK_PLAYER_CONTROLS = false;
 bool WILLRETURNTOCOMBATMODE = false;
 long DeadTime = 0;
 static ArxInstant LastHungerSample = ArxInstant_ZERO;
-static unsigned long ROTATE_START = 0;
+static ArxInstant ROTATE_START = ArxInstant_ZERO;
 
 // Player Anims FLAGS/Vars
 ANIM_HANDLE * herowaitbook = NULL;
@@ -239,7 +239,7 @@ void ARX_KEYRING_Combine(Entity * io) {
  */
 Vec3f ARX_PLAYER_FrontPos() {
 	Vec3f pos = player.pos;
-	pos += angleToVectorXZ(player.angle.getPitch()) * 100.f;
+	pos += angleToVectorXZ(player.angle.getYaw()) * 100.f;
 	pos += Vec3f(0.f, 100.f, 0.f); // XXX use -100 here ?
 	return pos;
 }
@@ -413,7 +413,7 @@ void ARX_PLAYER_Quest_Add(const std::string & quest, bool _bLoad) {
  * \brief Removes player invisibility by killing Invisibility spells on him
  */
 void ARX_PLAYER_Remove_Invisibility() {
-	spells.endByCaster(PlayerEntityHandle, SPELL_INVISIBILITY);
+	spells.endByCaster(EntityHandle_Player, SPELL_INVISIBILITY);
 }
 
 /* TODO use this table instead of the copied functions below!
@@ -509,17 +509,17 @@ void ARX_PLAYER_ComputePlayerFullStats() {
 	// Calculate for modifiers from spells
 		SpellBase * spell;
 		
-		spell = spells.getSpellOnTarget(PlayerEntityHandle, SPELL_ARMOR);
+		spell = spells.getSpellOnTarget(EntityHandle_Player, SPELL_ARMOR);
 		if(spell) {
 			player.m_miscMod.armorClass += spell->m_level;
 		}
 		
-		spell = spells.getSpellOnTarget(PlayerEntityHandle, SPELL_LOWER_ARMOR);
+		spell = spells.getSpellOnTarget(EntityHandle_Player, SPELL_LOWER_ARMOR);
 		if(spell) {
 			player.m_miscMod.armorClass -= spell->m_level;
 		}
 		
-		spell = spells.getSpellOnTarget(PlayerEntityHandle, SPELL_CURSE);
+		spell = spells.getSpellOnTarget(EntityHandle_Player, SPELL_CURSE);
 		if(spell) {
 			player.m_attributeMod.strength -= spell->m_level;
 			player.m_attributeMod.constitution -= spell->m_level;
@@ -527,7 +527,7 @@ void ARX_PLAYER_ComputePlayerFullStats() {
 			player.m_attributeMod.mind -= spell->m_level;
 		}
 	
-		spell = spells.getSpellOnTarget(PlayerEntityHandle, SPELL_BLESS);
+		spell = spells.getSpellOnTarget(EntityHandle_Player, SPELL_BLESS);
 		if(spell) {
 			player.m_attributeMod.strength += spell->m_level;
 			player.m_attributeMod.dexterity += spell->m_level;
@@ -1234,7 +1234,7 @@ void ARX_PLAYER_LoadHeroAnimsAndMesh(){
 	herowait_2h = EERIE_ANIMMANAGER_Load(ANIM_WAIT_TWOHANDED);
 	
 	Entity * io = new Entity("graph/obj3d/interactive/player/player", EntityInstance(-1));
-	arx_assert(io->index().handleData() == 0, "player entity didn't get index 0");
+	arx_assert(io->index() == EntityHandle_Player, "player entity didn't get index 0");
 	arx_assert(entities.player() == io);
 	
 	io->obj = hero;
@@ -1305,7 +1305,7 @@ void ARX_PLAYER_BecomesDead() {
 	player.Interface = 0;
 	DeadTime = 0;
 	
-	spells.endByCaster(PlayerEntityHandle);
+	spells.endByCaster(EntityHandle_Player);
 }
 
 float LASTPLAYERA = 0;
@@ -1325,13 +1325,13 @@ void ARX_PLAYER_Manage_Visual() {
 	ArxInstant now = arxtime.now();
 	
 	if(player.m_currentMovement & PLAYER_ROTATE) {
-		if(ROTATE_START == 0) {
+		if(ROTATE_START == ArxInstant_ZERO) {
 			ROTATE_START = now;
 		}
 	} else if (ROTATE_START) {
-		float elapsed = float(now) - ROTATE_START;
-		if(elapsed > 100) {
-			ROTATE_START = 0;
+		ArxDuration elapsed = now - ROTATE_START;
+		if(elapsed > ArxDurationMs(100)) {
+			ROTATE_START = ArxInstant_ZERO;
 		}
 	}
 	
@@ -1380,7 +1380,7 @@ void ARX_PLAYER_Manage_Visual() {
 	}
 	
 	if(player.lifePool.current > 0) {
-		io->angle = Anglef(0.f, 180.f - player.angle.getPitch(), 0.f);
+		io->angle = Anglef(0.f, 180.f - player.angle.getYaw(), 0.f);
 	}
 	
 	io->gameFlags |= GFLAG_ISINTREATZONE;
@@ -1444,8 +1444,8 @@ void ARX_PLAYER_Manage_Visual() {
 	}
 	
 	if(ROTATE_START
-	   && player.angle.getYaw() > 60.f
-	   && player.angle.getYaw() < 180.f
+	   && player.angle.getPitch() > 60.f
+	   && player.angle.getPitch() < 180.f
 	   && LASTPLAYERA > 60.f
 	   && LASTPLAYERA < 180.f
 	) {
@@ -1493,7 +1493,7 @@ void ARX_PLAYER_Manage_Visual() {
 		}
 	}
 	
-	LASTPLAYERA = player.angle.getYaw();
+	LASTPLAYERA = player.angle.getPitch();
 	
 	{
 	long tmove = player.m_currentMovement;
@@ -1591,13 +1591,13 @@ void ARX_PLAYER_Manage_Visual() {
 		layer3.cur_anim = NULL;
 	}
 	
-	if((player.m_currentMovement & PLAYER_CROUCH) && !(player.Last_Movement & PLAYER_CROUCH)
+	if((player.m_currentMovement & PLAYER_CROUCH) && !(player.m_lastMovement & PLAYER_CROUCH)
 			&& !player.levitate)
 	{
 		request0_anim = alist[ANIM_CROUCH_START];
 		request0_loop = false;
 	}
-	else if(!(player.m_currentMovement & PLAYER_CROUCH) && (player.Last_Movement & PLAYER_CROUCH))
+	else if(!(player.m_currentMovement & PLAYER_CROUCH) && (player.m_lastMovement & PLAYER_CROUCH))
 	{
 		request0_anim = alist[ANIM_CROUCH_END];
 		request0_loop = false;
@@ -1650,7 +1650,7 @@ void ARX_PLAYER_Manage_Visual() {
 retry:
 	;
 	
-	if(spells.ExistAnyInstanceForThisCaster(SPELL_FLYING_EYE, PlayerEntityHandle)) {
+	if(spells.ExistAnyInstanceForThisCaster(SPELL_FLYING_EYE, EntityHandle_Player)) {
 		request0_anim = alist[ANIM_MEDITATION];
 		request0_loop = true;
 		goto makechanges;
@@ -1752,7 +1752,7 @@ retry:
 	
 nochanges:
 	;
-	player.Last_Movement = player.m_currentMovement;
+	player.m_lastMovement = player.m_currentMovement;
 }
 
 /*!
@@ -1806,8 +1806,8 @@ void ForcePlayerLookAtIO(Entity * io) {
 	}
 
 	tcam.setTargetCamera(target);
-	player.angle.setYaw(MAKEANGLE(-tcam.angle.getYaw()));
-	player.angle.setPitch(MAKEANGLE(tcam.angle.getPitch() - 180.f));
+	player.angle.setPitch(MAKEANGLE(-tcam.angle.getPitch()));
+	player.angle.setYaw(MAKEANGLE(tcam.angle.getYaw() - 180.f));
 	player.angle.setRoll(0);
 	player.desiredangle = player.angle;
 }
@@ -1819,7 +1819,7 @@ void ARX_PLAYER_Frame_Update()
 {
 	ARX_PROFILE_FUNC();
 	
-	if(spells.getSpellOnTarget(PlayerEntityHandle, SPELL_PARALYSE)) {
+	if(spells.getSpellOnTarget(EntityHandle_Player, SPELL_PARALYSE)) {
 		player.m_paralysed = true;
 	} else {
 		entities.player()->ioflags &= ~IO_FREEZESCRIPT;
@@ -1841,30 +1841,30 @@ void ARX_PLAYER_Frame_Update()
 	if(io && io->_npcdata->ex_rotate) {
 		EERIE_EXTRA_ROTATE * extraRotation = io->_npcdata->ex_rotate;
 
-		float v = player.angle.getYaw();
+		float v = player.angle.getPitch();
 
 		if(v > 160)
 			v = -(360 - v);
 
 		if(player.Interface & INTER_COMBATMODE) {
 			if (ARX_EQUIPMENT_GetPlayerWeaponType() == WEAPON_BOW) {
-				extraRotation->group_rotate[0].setYaw(0); //head
-				extraRotation->group_rotate[1].setYaw(0); //neck
-				extraRotation->group_rotate[2].setYaw(0); //chest
-				extraRotation->group_rotate[3].setYaw(v); //belt
+				extraRotation->group_rotate[0].setPitch(0); //head
+				extraRotation->group_rotate[1].setPitch(0); //neck
+				extraRotation->group_rotate[2].setPitch(0); //chest
+				extraRotation->group_rotate[3].setPitch(v); //belt
 			} else {
 				v *= ( 1.0f / 10 ); 
-				extraRotation->group_rotate[0].setYaw(v); //head
-				extraRotation->group_rotate[1].setYaw(v); //neck
-				extraRotation->group_rotate[2].setYaw(v * 4); //chest
-				extraRotation->group_rotate[3].setYaw(v * 4); //belt
+				extraRotation->group_rotate[0].setPitch(v); //head
+				extraRotation->group_rotate[1].setPitch(v); //neck
+				extraRotation->group_rotate[2].setPitch(v * 4); //chest
+				extraRotation->group_rotate[3].setPitch(v * 4); //belt
 			}
 		} else {
 			v *= ( 1.0f / 4 ); 
-			extraRotation->group_rotate[0].setYaw(v); //head
-			extraRotation->group_rotate[1].setYaw(v); //neck
-			extraRotation->group_rotate[2].setYaw(v); //chest
-			extraRotation->group_rotate[3].setYaw(v); //belt*/
+			extraRotation->group_rotate[0].setPitch(v); //head
+			extraRotation->group_rotate[1].setPitch(v); //neck
+			extraRotation->group_rotate[2].setPitch(v); //chest
+			extraRotation->group_rotate[3].setPitch(v); //belt*/
 		}
 	}
 
@@ -1873,7 +1873,7 @@ void ARX_PLAYER_Frame_Update()
 	player.TRAP_DETECT = player.m_skillFull.mecanism;
 	player.TRAP_SECRET = player.m_skillFull.intuition;
 
-	if(spells.getSpellOnTarget(PlayerEntityHandle, SPELL_DETECT_TRAP))
+	if(spells.getSpellOnTarget(EntityHandle_Player, SPELL_DETECT_TRAP))
 		player.TRAP_DETECT = 100.f;
 
 	ARX_PLAYER_ManageTorch();
@@ -1884,7 +1884,7 @@ void ARX_PLAYER_Frame_Update()
  */
 static void ARX_PLAYER_MakeStepNoise() {
 	
-	if(spells.getSpellOnTarget(PlayerEntityHandle, SPELL_LEVITATE)) {
+	if(spells.getSpellOnTarget(EntityHandle_Player, SPELL_LEVITATE)) {
 		return;
 	}
 	
@@ -2064,7 +2064,7 @@ void PlayerMovementIterate(float DeltaTime) {
 				if(anything < 0.f) {
 					player.physics.cyl.height = old;
 					
-					spells.endByTarget(PlayerEntityHandle, SPELL_LEVITATE);
+					spells.endByTarget(EntityHandle_Player, SPELL_LEVITATE);
 				}
 			}
 			
@@ -2251,7 +2251,7 @@ void PlayerMovementIterate(float DeltaTime) {
 					const float LAVA_DAMAGE = 10.f;
 					float damages = LAVA_DAMAGE * g_framedelay * 0.01f * mul;
 					damages = ARX_SPELLS_ApplyFireProtection(entities.player(), damages);
-					ARX_DAMAGES_DamagePlayer(damages, DAMAGE_TYPE_FIRE, PlayerEntityHandle);
+					ARX_DAMAGES_DamagePlayer(damages, DAMAGE_TYPE_FIRE, EntityHandle_Player);
 					ARX_DAMAGES_DamagePlayerEquipment(damages);
 
 					Vec3f pos = player.basePosition();
@@ -2730,7 +2730,7 @@ void ARX_GAME_Reset(long type) {
 	ARX_SPECIAL_ATTRACTORS_Reset();
 
 	// Cinematics
-	DANAE_KillCinematic();
+	cinematicKill();
 
 	// Paths
 	ARX_PATH_ClearAllControled();
@@ -2774,7 +2774,7 @@ void ARX_GAME_Reset(long type) {
 	}
 
 	// Misc Player Vars.
-	ROTATE_START = 0;
+	ROTATE_START = ArxInstant_ZERO;
 	BLOCK_PLAYER_CONTROLS = false;
 	HERO_SHOW_1ST = -1;
 	PUSH_PLAYER_FORCE = Vec3f_ZERO;
@@ -2800,9 +2800,8 @@ void ARX_GAME_Reset(long type) {
 
 	// Missiles
 	ARX_MISSILES_ClearAll();
-
-	// IO PDL
-	TOTIOPDL = 0;
+	
+	culledStaticLightsReset();
 	
 	// Interface
 	ARX_INTERFACE_Reset();

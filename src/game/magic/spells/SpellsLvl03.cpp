@@ -27,6 +27,7 @@
 #include "game/NPC.h"
 #include "game/Player.h"
 #include "game/Spells.h"
+#include "game/effect/ParticleSystems.h"
 #include "graphics/effects/PolyBoom.h"
 #include "graphics/particle/Particle.h"
 #include "graphics/particle/ParticleEffects.h"
@@ -50,19 +51,19 @@ void SpeedSpell::Launch()
 	m_hasDuration = true;
 	m_fManaCostPerSecond = 2.f;
 	
-	if(m_caster == PlayerEntityHandle) {
+	if(m_caster == EntityHandle_Player) {
 		m_target = m_caster;
 	}
 	
 	ARX_SOUND_PlaySFX(SND_SPELL_SPEED_START, &entities[m_target]->pos);
 	
-	if(m_target == PlayerEntityHandle) {
+	if(m_target == EntityHandle_Player) {
 		m_snd_loop = ARX_SOUND_PlaySFX(SND_SPELL_SPEED_LOOP, &entities[m_target]->pos, 1.f, ARX_SOUND_PLAY_LOOPED);
 	}
 	
 	m_duration = (m_launchDuration > ArxDuration(-1)) ? m_launchDuration : ArxDurationMs(20000);
 	
-	if(m_caster == PlayerEntityHandle)
+	if(m_caster == EntityHandle_Player)
 		m_duration = ArxDurationMs(200000000);
 	
 	std::vector<VertexGroup> & grouplist = entities[m_target]->obj->grouplist;
@@ -94,7 +95,7 @@ void SpeedSpell::End() {
 	
 	m_targets.clear();
 	
-	if(m_caster == PlayerEntityHandle)
+	if(m_caster == EntityHandle_Player)
 		ARX_SOUND_Stop(m_snd_loop);
 	
 	ARX_SOUND_PlaySFX(SND_SPELL_SPEED_END, &entities[m_target]->pos);
@@ -107,7 +108,7 @@ void SpeedSpell::End() {
 
 void SpeedSpell::Update() {
 	
-	if(m_caster == PlayerEntityHandle)
+	if(m_caster == EntityHandle_Player)
 		ARX_SOUND_RefreshPosition(m_snd_loop, entities[m_target]->pos);
 	
 	for(size_t i = 0; i < m_trails.size(); i++) {
@@ -177,7 +178,7 @@ void FireballSpell::Launch() {
 	
 	m_duration = ArxDurationMs(6000);
 	
-	if(m_caster != PlayerEntityHandle) {
+	if(m_caster != EntityHandle_Player) {
 		m_hand_group = ActionPoint();
 	}
 	
@@ -189,15 +190,15 @@ void FireballSpell::Launch() {
 		if(ValidIONum(m_caster)) {
 			Entity * c = entities[m_caster];
 			if(c->ioflags & IO_NPC) {
-				target += angleToVectorXZ(c->angle.getPitch()) * 30.f;
+				target += angleToVectorXZ(c->angle.getYaw()) * 30.f;
 				target += Vec3f(0.f, -80.f, 0.f);
 			}
 		}
 	}
 	
 	float anglea = 0, angleb;
-	if(m_caster == PlayerEntityHandle) {
-		anglea = player.angle.getYaw(), angleb = player.angle.getPitch();
+	if(m_caster == EntityHandle_Player) {
+		anglea = player.angle.getPitch(), angleb = player.angle.getYaw();
 	} else {
 		
 		Vec3f start = entities[m_caster]->pos;
@@ -213,7 +214,7 @@ void FireballSpell::Launch() {
 			anglea = glm::degrees(getAngle(start.y, start.z, end.y, end.z + d));
 		}
 		
-		angleb = entities[m_caster]->angle.getPitch();
+		angleb = entities[m_caster]->angle.getYaw();
 	}
 	
 	Vec3f eSrc = target;
@@ -241,27 +242,27 @@ void FireballSpell::Update() {
 		float afAlpha = 0.f;
 		float afBeta = 0.f;
 		
-		if(m_caster == PlayerEntityHandle) {
-			afBeta = player.angle.getPitch();
-			afAlpha = player.angle.getYaw();
-			long idx = GetGroupOriginByName(entities[m_caster]->obj, "chest");
+		if(m_caster == EntityHandle_Player) {
+			afBeta = player.angle.getYaw();
+			afAlpha = player.angle.getPitch();
+			ObjVertHandle idx = GetGroupOriginByName(entities[m_caster]->obj, "chest");
 
-			if(idx >= 0) {
-				eCurPos = entities[m_caster]->obj->vertexlist3[idx].v;
+			if(idx != ObjVertHandle()) {
+				eCurPos = entities[m_caster]->obj->vertexlist3[idx.handleData()].v;
 			} else {
 				eCurPos = player.pos;
 			}
 			
 			eCurPos += angleToVectorXZ(afBeta) * 60.f;
 		} else {
-			afBeta = entities[m_caster]->angle.getPitch();
+			afBeta = entities[m_caster]->angle.getYaw();
 			
 			eCurPos = entities[m_caster]->pos;
 			eCurPos += angleToVectorXZ(afBeta) * 60.f;
 			
 			if(ValidIONum(m_caster) && (entities[m_caster]->ioflags & IO_NPC)) {
 				
-				eCurPos += angleToVectorXZ(entities[m_caster]->angle.getPitch()) * 30.f;
+				eCurPos += angleToVectorXZ(entities[m_caster]->angle.getYaw()) * 30.f;
 				eCurPos += Vec3f(0.f, -80.f, 0.f);
 			}
 			
@@ -280,13 +281,8 @@ void FireballSpell::Update() {
 	
 	eCurPos += eMove * (g_framedelay * 0.0045f);
 	
-	
-	if(!lightHandleIsValid(m_light))
-		m_light = GetFreeDynLight();
-	
-	if(lightHandleIsValid(m_light)) {
-		EERIE_LIGHT * light = lightHandleGet(m_light);
-		
+	EERIE_LIGHT * light = dynLightCreate(m_light);
+	if(light) {
 		light->pos = eCurPos;
 		light->intensity = 2.2f;
 		light->fallend = 500.f;
@@ -349,7 +345,7 @@ void CreateFoodSpell::Launch()
 	m_duration = (m_launchDuration > ArxDuration(-1)) ? m_launchDuration : ArxDurationMs(3500);
 	m_currentTime = 0;
 	
-	if(m_caster == PlayerEntityHandle || m_target == PlayerEntityHandle) {
+	if(m_caster == EntityHandle_Player || m_target == EntityHandle_Player) {
 		player.hunger = 100;
 	}
 	
@@ -357,36 +353,7 @@ void CreateFoodSpell::Launch()
 	
 	m_particles.SetPos(m_pos);
 	
-	{
-	ParticleParams cp;
-	cp.m_nbMax = 350;
-	cp.m_life = 800;
-	cp.m_lifeRandom = 2000;
-	cp.m_pos = Vec3f(100, 200, 100);
-	cp.m_direction = Vec3f(0.f, -1.f, 0.f);
-	cp.m_angle = glm::radians(5.f);
-	cp.m_speed = 120;
-	cp.m_speedRandom = 84;
-	cp.m_gravity = Vec3f(0, -10, 0);
-	cp.m_flash = 0;
-	cp.m_rotation = 1.0f / (101 - 80);
-
-	cp.m_startSegment.m_size = 8;
-	cp.m_startSegment.m_sizeRandom = 8;
-	cp.m_startSegment.m_color = Color(105, 105, 20, 145).to<float>();
-	cp.m_startSegment.m_colorRandom = Color(50, 50, 0, 10).to<float>();
-
-	cp.m_endSegment.m_size = 6;
-	cp.m_endSegment.m_sizeRandom = 4;
-	cp.m_endSegment.m_color = Color(20, 20, 5, 0).to<float>();
-	cp.m_endSegment.m_colorRandom = Color(40, 40, 0, 0).to<float>();
-
-	cp.m_blendMode = RenderMaterial::Additive;
-	cp.m_texture.set("graph/particles/create_food", 0, 100); //5
-	cp.m_spawnFlags = PARTICLE_CIRCULAR | PARTICLE_BORDER;
-	
-	m_particles.SetParams(cp);
-	}
+	m_particles.SetParams(g_particleParameters[ParticleParam_CreateFood]);
 }
 
 void CreateFoodSpell::End() {
@@ -445,12 +412,12 @@ void IceProjectileSpell::Launch()
 	
 	Vec3f target;
 	float angleb;
-	if(m_caster == PlayerEntityHandle) {
+	if(m_caster == EntityHandle_Player) {
 		target = player.pos + Vec3f(0.f, 160.f, 0.f);
-		angleb = player.angle.getPitch();
+		angleb = player.angle.getYaw();
 	} else {
 		target = entities[m_caster]->pos;
-		angleb = entities[m_caster]->angle.getPitch();
+		angleb = entities[m_caster]->angle.getYaw();
 	}
 	target += angleToVectorXZ(angleb) * 150.0f;
 	
@@ -559,8 +526,8 @@ void IceProjectileSpell::Update() {
 		icicle.size = glm::clamp(icicle.size, Vec3f(0.f), icicle.sizeMax);
 		
 		Anglef stiteangle;
-		stiteangle.setPitch(glm::cos(glm::radians(icicle.pos.x)) * 360);
-		stiteangle.setYaw(0);
+		stiteangle.setYaw(glm::cos(glm::radians(icicle.pos.x)) * 360);
+		stiteangle.setPitch(0);
 		stiteangle.setRoll(0);
 		
 		float tt = icicle.sizeMax.y * fColor;
