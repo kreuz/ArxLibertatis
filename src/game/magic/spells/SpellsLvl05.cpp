@@ -425,7 +425,6 @@ void RepelUndeadSpell::Update() {
 	eObjAngle.setPitch(0);
 	eObjAngle.setRoll(0);
 	
-	arxtime.update();
 	float vv = 1.f + (std::sin(arxtime.now_f() * ( 1.0f / 1000 )));
 	vv *= ( 1.0f / 2 );
 	vv += 1.1f;
@@ -613,8 +612,6 @@ void PoisonProjectileSpell::AddPoisonFog(const Vec3f & pos, float power) {
 	int iDiv = 4 - config.video.levelOfDetail;
 	
 	float flDiv = static_cast<float>(1 << iDiv);
-	
-	arxtime.update();
 	
 	long count = std::max(1l, checked_range_cast<long>(g_framedelay / flDiv));
 	while(count--) {

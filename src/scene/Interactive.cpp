@@ -465,7 +465,7 @@ void CheckSetAnimOutOfTreatZone(Entity * io, AnimLayer & layer) {
 		fartherThan(io->pos, ACTIVECAM->orgTrans.pos, 2500.f))
 	{
 
-		layer.ctime = layer.cur_anim->anims[layer.altidx_cur]->anim_time - 1;
+		layer.ctime = layer.cur_anim->anims[layer.altidx_cur]->anim_time - AnimationDurationMs(1);
 	}
 }
 
@@ -897,7 +897,6 @@ void RestoreInitialIOStatusOfIO(Entity * io)
 		io->inzone = NULL;
 		io->speed_modif = 0.f;
 		io->basespeed = 1.f;
-		io->frameloss = 0.f;
 		io->sfx_flag = 0;
 		io->max_durability = io->durability = 100;
 		io->gameFlags &= ~GFLAG_INVISIBILITY;
@@ -1229,6 +1228,8 @@ void ARX_INTERACTIVE_Teleport(Entity * io, const Vec3f & target, bool flag) {
 	
 	if(!io)
 		return;
+	
+	arx_assert(isallfinite(target));
 	
 	io->gameFlags &= ~GFLAG_NOCOMPUTATION;
 	io->requestRoomUpdate = true;
@@ -2207,8 +2208,6 @@ void UpdateCameras() {
 	
 	ARX_PROFILE_FUNC();
 	
-	arxtime.update();
-	
 	for(size_t i = 1; i < entities.size(); i++) {
 		const EntityHandle handle = EntityHandle(i);
 		Entity * io = entities[handle];
@@ -2425,11 +2424,11 @@ void UpdateInter() {
 			io->bbox2D.min.x = 9999;
 			io->bbox2D.max.x = -1;
 
-			long diff;
+			AnimationDuration diff;
 			if(io->animlayer[0].flags & EA_PAUSED)
-				diff = 0;
+				diff = AnimationDuration_ZERO;
 			else
-				diff = static_cast<long>(g_framedelay);
+				diff = AnimationDurationUs(s64(g_framedelay * 1000.f));
 
 			Vec3f pos = io->pos;
 

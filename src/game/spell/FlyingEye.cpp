@@ -20,6 +20,7 @@
 #include "game/spell/FlyingEye.h"
 
 #include "core/Core.h"
+#include "core/GameTime.h"
 
 #include "scene/Object.h"
 
@@ -35,7 +36,6 @@ float MagicSightFader=0.f;
 static TextureContainer * Flying_Eye = NULL;
 static EERIE_3DOBJ * eyeballobj = NULL;			// EyeBall 3D Object	// NEEDTO: Load dynamically
 
-extern float Original_framedelay;
 extern float PULSATE;
 
 void FlyingEye_Init() {
@@ -74,7 +74,7 @@ void DrawMagicSightInterface()
 
 		EERIEDrawBitmap(Rectf(g_size), 0.0001f, NULL, Color3f::gray(col).to<u8>());
 
-		MagicSightFader -= Original_framedelay * (1.f/400);
+		MagicSightFader -= toMs(g_platformTime.lastFrameDuration()) * (1.f/400);
 
 		if(MagicSightFader < 0.f)
 			MagicSightFader = 0.f;

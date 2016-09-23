@@ -298,7 +298,6 @@ void ARX_CHANGELEVEL_Change(const std::string & level, const std::string & targe
 	progressBarSetTotal(238);
 	progressBarReset();
 	
-	arxtime.update();
 	ARX_CHANGELEVEL_DesiredTime = arxtime.now();
 		
 	long num = GetLevelNumByName("level" + level);
@@ -428,7 +427,6 @@ static bool ARX_CHANGELEVEL_Push_Index(long num) {
 	asi.version       = ARX_GAMESAVE_VERSION;
 	asi.nb_inter      = 0;
 	asi.nb_paths      = nbARXpaths;
-	arxtime.update();
 	asi.time          = arxtime.now();
 	asi.nb_lights     = 0;
 	asi.gmods_stacked = GLOBAL_MODS();
@@ -1356,7 +1354,7 @@ static long ARX_CHANGELEVEL_Push_IO(const Entity * io, long level) {
 				as->ex_rotate = *io->_npcdata->ex_rotate;
 			}
 
-			as->blood_color = io->_npcdata->blood_color.toBGRA();
+			as->blood_color = io->_npcdata->blood_color.toBGRA().t;
 			as->fDetect = io->_npcdata->fDetect;
 			as->cuts = io->_npcdata->cuts;
 			pos += struct_size;
@@ -1982,11 +1980,24 @@ static Entity * ARX_CHANGELEVEL_Pop_IO(const std::string & idString, EntityInsta
 		io->ioflags = EntityFlags::load(ais->ioflags); // TODO save/load flags
 		
 		io->ioflags &= ~IO_FREEZESCRIPT;
+		
+		io->initpos = ais->initpos.toVec3();
+		arx_assert(isallfinite(io->initpos));
+		
 		io->pos = ais->pos.toVec3();
+		if(!isallfinite(io->pos)) {
+			LogWarning << "Found bad entity pos in " << io->idString();
+			io->pos = io->initpos;
+		}
+		
 		io->lastpos = ais->lastpos.toVec3();
+		if(!isallfinite(io->lastpos)) {
+			LogWarning << "Found bad entity lastpos in " << io->idString();
+			io->lastpos = io->initpos;
+		}
+		
 		io->move = ais->move.toVec3();
 		io->lastmove = ais->lastmove.toVec3();
-		io->initpos = ais->initpos.toVec3();
 		io->initangle = ais->initangle;
 		io->angle = ais->angle;
 		io->scale = ais->scale;
@@ -2006,7 +2017,6 @@ static Entity * ARX_CHANGELEVEL_Pop_IO(const std::string & idString, EntityInsta
 		io->stopped = ais->stopped;
 		io->basespeed = 1;
 		io->speed_modif = 0.f; // TODO why are these not loaded from the savegame?
-		io->frameloss = 0;
 		io->rubber = ais->rubber;
 		io->max_durability = ais->max_durability;
 		io->durability = ais->durability;
@@ -2076,6 +2086,12 @@ static Entity * ARX_CHANGELEVEL_Pop_IO(const std::string & idString, EntityInsta
 		
 		io->spellcast_data = ais->spellcast_data;
 		io->physics = ais->physics;
+		
+		if(!isallfinite(io->physics.cyl.origin)) {
+			LogWarning << "Found bad entity physics.cyl.origin in " << io->idString();
+			io->physics.cyl.origin = io->initpos;
+		}
+		
 		assert(SAVED_MAX_ANIM_LAYERS == MAX_ANIM_LAYERS);
 		std::copy(ais->animlayer, ais->animlayer + SAVED_MAX_ANIM_LAYERS, io->animlayer);
 		
@@ -2805,7 +2821,6 @@ bool ARX_CHANGELEVEL_Save(const std::string & name, const fs::path & savefile) {
 	pld.level = CURRENTLEVEL;
 	util::storeString(pld.name, name.c_str());
 	pld.version = ARX_GAMESAVE_VERSION;
-	arxtime.update();
 	pld.time = static_cast<u32>(arxtime.now()); // TODO save/load time
 	
 	const char * dat = reinterpret_cast<const char *>(&pld);

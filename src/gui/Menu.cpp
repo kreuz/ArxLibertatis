@@ -358,7 +358,7 @@ void ARX_Menu_Render() {
 						(g_size.center().x) * 0.82f,
 						ARXmenu.mda->flyover[FLYING_OVER],
 						Color(232 + t, 204 + t, 143 + t),
-						1000,
+						PlatformDurationMs(1000),
 						0.01f,
 						2);
 				}
@@ -507,7 +507,7 @@ void ARX_Menu_Render() {
 	light->pos.y = 0.f + GInput->getMousePosAbs().y - (g_size.height() >> 1);
 	
 	if(pTextManage) {
-		pTextManage->Update(g_framedelay);
+		pTextManage->Update(g_platformTime.lastFrameDuration());
 		pTextManage->Render();
 	}
 	
@@ -515,14 +515,12 @@ void ARX_Menu_Render() {
 		ARX_INTERFACE_RenderCursor(true);
 	
 	if(ARXmenu.currentmode == AMCM_NEWQUEST) {
-		if(ProcessFadeInOut(bFadeInOut)) {
+		if(MenuFader_process(bFadeInOut)) {
 			switch(iFadeAction) {
 				case AMCM_OFF:
 					arxtime.resume();
 					ARX_MENU_NEW_QUEST_Clicked_QUIT();
-					iFadeAction = -1;
-					g_menuFadeActive = false;
-					fFadeInOut = 0.f;
+					MenuFader_reset();
 					
 					if(pTextManage)
 						pTextManage->Clear();

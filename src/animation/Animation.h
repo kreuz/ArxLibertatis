@@ -63,7 +63,7 @@ struct EERIE_FRAME
 	bool  stepSound;
 	bool  f_translate;
 	bool  f_rotate;
-	float		time;
+	AnimationDuration time;
 	Vec3f	translate;
 	glm::quat	quat;
 	audio::SampleId	sample;
@@ -79,7 +79,7 @@ struct EERIE_GROUP
 
 struct EERIE_ANIM
 {
-	ArxDuration anim_time;
+	AnimationDuration anim_time;
 	long		nb_groups;
 	long		nb_key_frames;
 	EERIE_FRAME *	frames;
@@ -139,7 +139,7 @@ struct AnimLayer {
 	ANIM_HANDLE * cur_anim;
 	short altidx_next; // idx to alternate anims...
 	short altidx_cur; // idx to alternate anims...
-	long ctime;
+	AnimationDuration ctime;
 	AnimUseType flags;
 	AnimUseType nextflags;
 	long lastframe;
@@ -200,7 +200,7 @@ void EERIE_ANIMMANAGER_ReleaseHandle(ANIM_HANDLE * anim);
 ANIM_HANDLE * EERIE_ANIMMANAGER_Load(const res::path & path);
 ANIM_HANDLE * EERIE_ANIMMANAGER_Load_NoWarning(const res::path & path);
 
-void PrepareAnim(AnimLayer & layer, unsigned long time, Entity *io);
+void PrepareAnim(AnimLayer & layer, AnimationDuration time, Entity *io);
 void ResetAnim(AnimLayer & layer);
 
 void AcquireLastAnim(Entity * io);

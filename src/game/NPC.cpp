@@ -980,6 +980,7 @@ void ARX_PHYSICS_Apply() {
 				
 				io->requestRoomUpdate = true;
 				io->pos = pbox->vert[0].pos;
+				arx_assert(isallfinite(io->pos));
 				
 				continue;
 			}
@@ -1641,8 +1642,8 @@ static void ARX_NPC_Manage_Anims(Entity * io, float TOLERANCE) {
 						layer1.cur_anim = NULL;
 					}
 				} else if(!(io->ioflags & IO_HIT)) {
-					long ctime = layer1.ctime;
-					long animtime = layer1.cur_anim->anims[0]->anim_time;
+					AnimationDuration ctime = layer1.ctime;
+					AnimationDuration animtime = layer1.cur_anim->anims[0]->anim_time;
 					if(ctime > animtime * STRIKE_MUL && ctime <= animtime * STRIKE_MUL2) {
 						CheckHit(io, 1.f);
 						io->ioflags |= IO_HIT;
@@ -1747,9 +1748,12 @@ static void ARX_NPC_Manage_Anims(Entity * io, float TOLERANCE) {
 						changeAnimation(io, 1, ready);
 						Strike_StartTickCount(io);
 					} else {
-						long ctime = layer1.ctime;
-						long animtime = layer1.cur_anim->anims[0]->anim_time;
-						if(ctime > animtime * STRIKE_MUL && ctime <= animtime * STRIKE_MUL2) {
+						AnimationDuration ctime = layer1.ctime;
+						AnimationDuration animtime = layer1.cur_anim->anims[0]->anim_time;
+						
+						if(   ctime > animtime * STRIKE_MUL
+						   && ctime <= animtime * STRIKE_MUL2
+						) {
 							if(!(io->ioflags & IO_HIT)) {
 								if(ARX_EQUIPMENT_Strike_Check(io, io->_npcdata->weapon, 1, 0, io->targetinfo)) {
 									io->ioflags |= IO_HIT;
@@ -2543,6 +2547,7 @@ static void ManageNPCMovement(Entity * io)
 	}
 	
 	// Now update lastpos values for next call use...
+	arx_assert(isallfinite(io->pos));
 	io->lastpos = io->pos;
 }
 

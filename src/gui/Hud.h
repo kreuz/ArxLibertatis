@@ -22,6 +22,7 @@
 
 #include <vector>
 
+#include "core/TimeTypes.h"
 #include "game/GameTypes.h"
 #include "gui/hud/HudCommon.h"
 #include "math/Types.h"
@@ -44,7 +45,7 @@ private:
 	
 	float m_intensity;
 	bool m_flashActive;
-	unsigned long m_flashTime;
+	PlatformDuration m_flashTime;
 	float m_flashIntensity;
 	
 public:
@@ -61,7 +62,7 @@ public:
 class BookIconGui : public HudIconBase {
 private:
 	Vec2f m_size;
-	unsigned long ulBookHaloTime;
+	PlatformDuration ulBookHaloTime;
 	
 public:
 	BookIconGui();
@@ -117,7 +118,7 @@ private:
 	Vec2f m_pos;
 	Vec2f m_size;
 	
-	long m_haloTime;
+	PlatformDuration m_haloTime;
 	
 public:
 	PurseIconGui();
@@ -377,7 +378,7 @@ enum FadeDirection {
 class PlayerInterfaceFader {
 private:
 	long m_direction;
-	float m_current;
+	PlatformDuration m_current;
 	
 public:
 	PlayerInterfaceFader();

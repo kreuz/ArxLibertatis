@@ -127,7 +127,7 @@ void HitStrengthGauge::init() {
 
 void HitStrengthGauge::requestFlash(float flashIntensity) {
 	m_flashActive = true;
-	m_flashTime = 0;
+	m_flashTime = PlatformDuration_ZERO;
 	m_flashIntensity = flashIntensity;
 }
 
@@ -160,11 +160,10 @@ void HitStrengthGauge::update() {
 	}
 	
 	if(m_flashActive) {
-		float fCalc = m_flashTime + Original_framedelay;
-		m_flashTime = checked_range_cast<unsigned long>(fCalc);
-		if(m_flashTime >= 500) {
+		m_flashTime += g_platformTime.lastFrameDuration();
+		if(m_flashTime >= PlatformDurationMs(500)) {
 			m_flashActive = false;
-			m_flashTime = 0;
+			m_flashTime = PlatformDuration_ZERO;
 		}
 	}
 }
@@ -236,12 +235,12 @@ void BookIconGui::init() {
 	m_haloColor = Color3f(0.2f, 0.4f, 0.8f);
 	
 	m_haloActive = false;
-	ulBookHaloTime = 0;
+	ulBookHaloTime = PlatformDuration_ZERO;
 }
 
 void BookIconGui::requestHalo() {
 	m_haloActive = true;
-	ulBookHaloTime = 0;
+	ulBookHaloTime = PlatformDuration_ZERO;
 }
 
 void BookIconGui::requestFX() {
@@ -253,9 +252,8 @@ void BookIconGui::update(const Rectf & parent) {
 	m_rect = createChild(parent, Anchor_TopRight, m_size * m_scale, Anchor_BottomRight);
 	
 	if(m_haloActive) {
-		float fCalc = ulBookHaloTime + Original_framedelay;
-		ulBookHaloTime = checked_range_cast<unsigned long>(fCalc);
-		if(ulBookHaloTime >= 3000) { // ms
+		ulBookHaloTime += g_platformTime.lastFrameDuration();
+		if(ulBookHaloTime >= PlatformDurationMs(3000)) { // ms
 			m_haloActive = false;
 		}
 	}
@@ -287,7 +285,7 @@ void BackpackIconGui::update(const Rectf & parent) {
 
 void BackpackIconGui::updateInput() {
 	
-	static ArxInstant flDelay = ArxInstant_ZERO;
+	static PlatformInstant flDelay = PlatformInstant_ZERO;
 	
 	// Check for backpack Icon
 	if(m_rect.contains(Vec2f(DANAEMouse))) {
@@ -297,7 +295,7 @@ void BackpackIconGui::updateInput() {
 		}
 	}
 	
-	if(m_rect.contains(Vec2f(DANAEMouse)) || flDelay) {
+	if(m_rect.contains(Vec2f(DANAEMouse)) || flDelay != PlatformInstant_ZERO) {
 		eMouseState = MOUSE_IN_INVENTORY_ICON;
 		SpecialCursor = CURSOR_INTERACTION_ON;
 		
@@ -307,18 +305,16 @@ void BackpackIconGui::updateInput() {
 			
 			playerInventory.optimize();
 			
-			flDelay = ArxInstant_ZERO;
-		} else if(eeMouseDown1() || flDelay) {
-			if(!flDelay) {
-				arxtime.update();
-				flDelay = arxtime.now();
+			flDelay = PlatformInstant_ZERO;
+		} else if(eeMouseDown1() || flDelay != PlatformInstant_ZERO) {
+			if(flDelay == PlatformInstant_ZERO) {
+				flDelay = g_platformTime.frameStart();
 				return;
 			} else {
-				arxtime.update();
-				if(arxtime.now() - flDelay < 300) {
+				if(g_platformTime.frameStart() - flDelay < PlatformDurationMs(300)) {
 					return;
 				} else {
-					flDelay = ArxInstant_ZERO;
+					flDelay = PlatformInstant_ZERO;
 				}
 			}
 			
@@ -473,22 +469,20 @@ void PurseIconGui::init() {
 	m_haloColor = Color3f(0.9f, 0.9f, 0.1f);
 	
 	m_haloActive = false;
-	m_haloTime = 0;
+	m_haloTime = PlatformDuration_ZERO;
 }
 
 void PurseIconGui::requestHalo() {
 	m_haloActive = true;
-	m_haloTime = 0;
+	m_haloTime = PlatformDuration_ZERO;
 }
 
 void PurseIconGui::update(const Rectf & parent) {
 	m_rect = createChild(parent, Anchor_TopRight, m_size * m_scale, Anchor_BottomRight);
 	
-	//A halo is drawn on the character's stats icon (book) when leveling up, for example.
 	if(m_haloActive) {
-		float fCalc = m_haloTime + Original_framedelay;
-		m_haloTime = checked_range_cast<unsigned long>(fCalc);
-		if(m_haloTime >= 1000) { // ms
+		m_haloTime += g_platformTime.lastFrameDuration();
+		if(m_haloTime >= PlatformDurationMs(1000)) {
 			m_haloActive = false;
 		}
 	}
@@ -1346,7 +1340,7 @@ bool PLAYER_INTERFACE_HIDE_COUNT = true;
 
 PlayerInterfaceFader::PlayerInterfaceFader()
 	: m_direction(0)
-	, m_current(0.f)
+	, m_current(PlatformDuration_ZERO)
 {}
 
 void PlayerInterfaceFader::reset() {
@@ -1355,7 +1349,7 @@ void PlayerInterfaceFader::reset() {
 }
 
 void PlayerInterfaceFader::resetSlid() {
-	m_current = 0.f;
+	m_current = PlatformDuration_ZERO;
 }
 
 void PlayerInterfaceFader::requestFade(FadeDirection showhide, long smooth) {
@@ -1377,11 +1371,11 @@ void PlayerInterfaceFader::requestFade(FadeDirection showhide, long smooth) {
 			m_direction = 1;
 	} else {
 		if(showhide == FadeDirection_In)
-			m_current = 0.f;
+			m_current = PlatformDuration_ZERO;
 		else
-			m_current = 100.f;
+			m_current = PlatformDurationMs(1000);
 		
-		lSLID_VALUE = m_current;
+		lSLID_VALUE = float(toMs(m_current)) / 10.f;
 	}
 }
 
@@ -1399,12 +1393,12 @@ void PlayerInterfaceFader::update() {
 				PlatformInstant t = g_platformTime.frameStart();
 				
 				if(t - SLID_START > PlatformDurationMs(10000)) {
-					m_current += float(toMs(g_platformTime.lastFrameDuration()) * (1.0/10));
+					m_current += g_platformTime.lastFrameDuration();
 					
-					if(m_current > 100.f)
-						m_current = 100.f;
+					if(m_current > PlatformDurationMs(1000))
+						m_current = PlatformDurationMs(1000);
 					
-					lSLID_VALUE = m_current;
+					lSLID_VALUE = float(toMs(m_current)) / 10.f;
 				} else {
 					bOk = true;
 				}
@@ -1412,31 +1406,31 @@ void PlayerInterfaceFader::update() {
 		}
 		
 		if(bOk) {
-			m_current -= float(toMs(g_platformTime.lastFrameDuration()) * (1.0/10));
+			m_current -= g_platformTime.lastFrameDuration();
 			
-			if(m_current < 0.f)
-				m_current = 0.f;
+			if(m_current < PlatformDuration_ZERO)
+				m_current = PlatformDuration_ZERO;
 			
-			lSLID_VALUE = m_current;
+			lSLID_VALUE = float(toMs(m_current)) / 10.f;
 		}
 	}
 	
 	if(m_direction == 1) {
-		m_current += float(toMs(g_platformTime.lastFrameDuration()) * (1.0/10));
+		m_current += g_platformTime.lastFrameDuration();
 		
-		if(m_current > 100.f) {
-			m_current = 100.f;
+		if(m_current > PlatformDurationMs(1000)) {
+			m_current = PlatformDurationMs(1000);
 			m_direction = 0;
 		}
-		lSLID_VALUE = m_current;
+		lSLID_VALUE = float(toMs(m_current)) / 10.f;
 	} else if(m_direction == -1) {
-		m_current -= float(toMs(g_platformTime.lastFrameDuration()) * (1.0/10));
+		m_current -= g_platformTime.lastFrameDuration();
 		
-		if(m_current < 0.f) {
-			m_current = 0.f;
+		if(m_current < PlatformDuration_ZERO) {
+			m_current = PlatformDuration_ZERO;
 			m_direction = 0;
 		}
-		lSLID_VALUE = m_current;
+		lSLID_VALUE = float(toMs(m_current)) / 10.f;
 	}
 }
 

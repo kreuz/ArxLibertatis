@@ -204,7 +204,7 @@ bool Menu2_Render() {
 	if(pMenuCursor == NULL) {
 		pMenuCursor = new MenuCursor();
 	}
-	pMenuCursor->update(toMs(g_platformTime.lastFrameDuration()));
+	pMenuCursor->update(g_platformTime.lastFrameDuration());
 	
 	GRenderer->GetTextureStage(0)->setMinFilter(TextureStage::FilterLinear);
 	GRenderer->GetTextureStage(0)->setMagFilter(TextureStage::FilterLinear);
@@ -295,7 +295,7 @@ bool Menu2_Render() {
 			pWindowMenu->m_currentPageId=mainMenu->eOldMenuWindowState;
 		}
 
-		pWindowMenu->Update(toMs(g_platformTime.lastFrameDuration()));
+		pWindowMenu->Update(g_platformTime.lastFrameDuration());
 		MENUSTATE eMS = pWindowMenu->Render();
 		if(eMS != NOP) {
 			mainMenu->eOldMenuWindowState=eMS;
@@ -308,7 +308,7 @@ bool Menu2_Render() {
 	// If the menu needs to be reinitialized, then the text in the TextManager is probably using bad fonts that were deleted already
 	// Skip one update in this case
 	if(pTextManage && !mainMenu->bReInitAll) {
-		pTextManage->Update(toMs(g_platformTime.lastFrameDuration()));
+		pTextManage->Update(g_platformTime.lastFrameDuration());
 		pTextManage->Render();
 	}
 
@@ -321,7 +321,7 @@ bool Menu2_Render() {
 	
 	g_thumbnailCursor.render();
 	
-	if(ProcessFadeInOut(bFadeInOut)) {
+	if(MenuFader_process(bFadeInOut)) {
 		switch(iFadeAction) {
 			case AMCM_CREDITS:
 				ARX_MENU_Clicked_CREDITS();
@@ -394,12 +394,12 @@ void CWindowMenu::add(MenuPage *page) {
 	page->m_pos = m_pos;
 }
 
-void CWindowMenu::Update(float _fDTime) {
+void CWindowMenu::Update(PlatformDuration _fDTime) {
 
 	float fCalc	= fPosXCalc + (fDist * glm::sin(glm::radians(fAngle)));
 
 	m_pos.x = checked_range_cast<int>(fCalc);
-	fAngle += _fDTime * 0.08f;
+	fAngle += float(toMs(_fDTime)) * 0.08f;
 
 	if(fAngle > 90.f)
 		fAngle = 90.f;
@@ -465,7 +465,7 @@ MenuPage::MenuPage(const Vec2f & pos, const Vec2f & size, MENUSTATE _eMenuState)
 	, m_selected(NULL)
 	, bEdit(false)
 	, bMouseAttack(false)
-	, m_blinkTime(0.f)
+	, m_blinkTime(PlatformDuration_ZERO)
 	, m_blink(true)
 {
 	m_size = size;
@@ -742,7 +742,7 @@ MENUSTATE MenuPage::Update(Vec2f pos) {
 		if(widget) {
 			m_selected = widget;
 			
-			if(GInput->getMouseButtonDoubleClick(Mouse::Button_0, 300)) {
+			if(GInput->getMouseButtonDoubleClick(Mouse::Button_0)) {
 				MENUSTATE e = m_selected->m_targetMenu;
 				bEdit = m_selected->OnMouseDoubleClick();
 				
@@ -770,7 +770,7 @@ MENUSTATE MenuPage::Update(Vec2f pos) {
 			if(widget) {
 				m_selected = widget;
 				
-				if(GInput->getMouseButtonDoubleClick(Mouse::Button_0, 300)) {
+				if(GInput->getMouseButtonDoubleClick(Mouse::Button_0)) {
 					bEdit = m_selected->OnMouseDoubleClick();
 					
 					if(bEdit)
@@ -816,9 +816,11 @@ void MenuPage::Render() {
 		m_selected->RenderMouseOver();
 		
 		{
-			m_blinkTime += float(toMs(g_platformTime.lastFrameDuration()));
-			if(m_blinkTime > m_blinkDuration * 2)
-				m_blinkTime = 0;
+			static const PlatformDuration m_blinkDuration = PlatformDurationMs(300);
+			
+			m_blinkTime += g_platformTime.lastFrameDuration();
+			if(m_blinkTime > (m_blinkDuration + m_blinkDuration))
+				m_blinkTime = PlatformDuration_ZERO;
 			
 			m_blink = m_blinkTime > m_blinkDuration;
 		}

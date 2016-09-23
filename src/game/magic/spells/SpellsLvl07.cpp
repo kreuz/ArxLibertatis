@@ -189,7 +189,7 @@ void FlyingEyeSpell::Update() {
 	if(m_lastupdate - m_timcreation <= ArxDurationMs(3000)) {
 		eyeball.exist = m_lastupdate - m_timcreation * (1.0f / 30);
 		eyeball.size = Vec3f(1.f - float(eyeball.exist) * 0.01f);
-		eyeball.angle.setYaw(eyeball.angle.getYaw() + framediff3 * 0.6f);
+		eyeball.angle.setYaw(eyeball.angle.getYaw() + toMs(framediff3) * 0.6f);
 	} else {
 		eyeball.exist = 2;
 	}
@@ -646,7 +646,7 @@ void ConfuseSpell::Launch() {
 	AnimLayer & au = animlayer[0];
 	au.next_anim = NULL;
 	au.cur_anim = anim_papii;
-	au.ctime = 0;
+	au.ctime = AnimationDuration_ZERO;
 	au.flags = EA_LOOP;
 	au.nextflags = 0;
 	au.lastframe = 0;
@@ -684,11 +684,11 @@ void ConfuseSpell::Update() {
 	mat.setBlendType(RenderMaterial::Additive);
 	mat.setTexture(tex_trail);
 	
-	arxtime.update();
 	Anglef stiteangle = Anglef(0.f, -glm::degrees(arxtime.now_f() * ( 1.0f / 500 )), 0.f);
 	
 	{
-		EERIEDrawAnimQuatUpdate(spapi, animlayer, stiteangle, eCurPos, g_framedelay, NULL, false);
+		AnimationDuration delta = AnimationDurationUs(s64(g_framedelay * 1000.f));
+		EERIEDrawAnimQuatUpdate(spapi, animlayer, stiteangle, eCurPos, delta, NULL, false);
 		EERIEDrawAnimQuatRender(spapi, eCurPos, NULL, 0.f);
 	}
 	

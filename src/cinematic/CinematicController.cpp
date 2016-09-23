@@ -19,6 +19,7 @@
 
 #include "cinematic/CinematicController.h"
 
+#include "core/Application.h"
 #include "core/GameTime.h"
 
 #include "io/log/Logger.h"
@@ -37,6 +38,8 @@
 #include "graphics/Renderer.h"
 #include "input/Input.h"
 
+#include "window/RenderWindow.h"
+
 enum CinematicState {
 	Cinematic_Stopped,
 	Cinematic_StartRequested,
@@ -49,6 +52,15 @@ static std::string WILL_LAUNCH_CINE;
 static std::string LAST_LAUNCHED_CINE;
 
 Cinematic			*ControlCinematique=NULL;	// 2D Cinematic Controller
+
+void cinematicInit() {
+	const Vec2i & size = mainApp->getWindow()->getSize();
+	ControlCinematique = new Cinematic(size);
+}
+
+void cinematicDestroy() {
+	delete ControlCinematique, ControlCinematique = NULL;
+}
 
 void cinematicPrepare(std::string name, bool preload) {
 
@@ -130,9 +142,12 @@ bool isInCinematic() {
 
 // Manages Currently playing 2D cinematic
 void cinematicRender() {
-	
+
+	PlatformDuration diff = g_platformTime.lastFrameDuration();
+
 	if(PLAY_LOADED_CINEMATIC == Cinematic_StartRequested) {
 		LogDebug("really starting cinematic now");
+		diff = PlatformDuration_ZERO;
 		PLAY_LOADED_CINEMATIC = Cinematic_Started;
 	}
 
@@ -140,7 +155,7 @@ void cinematicRender() {
 	ControlCinematique->InitDeviceObjects();
 	GRenderer->SetRenderState(Renderer::AlphaBlending, true);
 
-	ControlCinematique->Render(float(toMs(g_platformTime.lastFrameDuration())));
+	ControlCinematique->Render(diff);
 
 	// end the animation
 	if(   !ControlCinematique->key

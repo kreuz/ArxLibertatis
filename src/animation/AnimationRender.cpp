@@ -326,14 +326,14 @@ void Cedric_ApplyLightingFirstPartRefactor(Entity *io) {
 		} else {
 			const ArxDuration elapsed = arxtime.now() - io->sfx_time;
 
-			if(elapsed > 0) {
-				if(elapsed < 3000) { // 5 seconds to red
-					float ratio = elapsed * (1.0f / 3000);
+			if(elapsed > ArxDuration_ZERO) {
+				if(elapsed < ArxDurationMs(3000)) { // 5 seconds to red
+					float ratio = toMs(elapsed) * (1.0f / 3000);
 					io->special_color = Color3f(1.f, 1.f - ratio, 1.f - ratio);
 					io->highlightColor += Color3f(std::max(ratio - 0.5f, 0.f), 0.f, 0.f) * 255;
 					AddRandomSmoke(io, 1);
-				} else if(elapsed < 6000) { // 5 seconds to White
-					float ratio = elapsed * (1.0f / 3000);
+				} else if(elapsed < ArxDurationMs(6000)) { // 5 seconds to White
+					float ratio = toMs(elapsed) * (1.0f / 3000);
 					io->special_color = Color3f::red;
 					io->highlightColor += Color3f(std::max(ratio - 0.5f, 0.f), 0.f, 0.f) * 255;
 					AddRandomSmoke(io, 2);
@@ -1132,7 +1132,7 @@ static void Cedric_RenderObject(EERIE_3DOBJ * eobj, Skeleton * obj, Entity * io,
 	if(io && (io->sfx_flag & SFX_TYPE_YLSIDE_DEATH) && io->show != SHOW_FLAG_TELEPORTING) {
 		const ArxDuration elapsed = arxtime.now() - io->sfx_time;
 		if(elapsed >= ArxDurationMs(3000) && elapsed < ArxDurationMs(6000)) {
-			float ratio = (elapsed - 3000) * (1.0f / 3000);
+			float ratio = toMs(elapsed - ArxDurationMs(3000)) * (1.0f / 3000);
 			glowColor = Color::gray(ratio).toRGB();
 			glow = true;
 		}
@@ -1540,7 +1540,7 @@ void EERIEDrawAnimQuatUpdate(EERIE_3DOBJ * eobj,
                              AnimLayer * animlayer,
                              const Anglef & angle,
                              const Vec3f & pos,
-                             unsigned long time,
+                             AnimationDuration time,
                              Entity * io,
                              bool update_movement
 ) {
@@ -1553,23 +1553,15 @@ void EERIEDrawAnimQuatUpdate(EERIE_3DOBJ * eobj,
 		if(speedfactor < 0)
 			speedfactor = 0;
 
-		float tim = (float)time * speedfactor;
+		AnimationDuration tim = time * speedfactor;
 
-		if(tim<=0.f)
-			time=0;
+		if(tim <= AnimationDuration_ZERO)
+			time = AnimationDuration_ZERO;
 		else
-			time=(unsigned long)tim;
-
-		io->frameloss += tim - time;
-
-		if(io->frameloss > 1.f) { // recover lost time...
-			long tt = io->frameloss;
-			io->frameloss -= tt;
-			time += tt;
-		}
+			time = tim;
 	}
 
-	if(time > 0) {
+	if(time > AnimationDuration_ZERO) {
 		for(size_t count = 0; count < MAX_ANIM_LAYERS; count++) {
 			AnimLayer & layer = animlayer[count];
 			if(layer.cur_anim)

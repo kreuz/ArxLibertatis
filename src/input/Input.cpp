@@ -374,50 +374,48 @@ void Input::update() {
 		}
 	}
 	
-	arxtime.update(false);
-	const ArxInstant now = arxtime.now();
-
+	const s64 now = platform::getTimeMs();
+	
 	for(int buttonId = Mouse::ButtonBase; buttonId < Mouse::ButtonMax; buttonId++) {
 		int i = buttonId - Mouse::ButtonBase;
-
+		
 		int iNumClick;
 		int iNumUnClick;
 		backend->getMouseButtonClickCount(buttonId, iNumClick, iNumUnClick);
-
-		iOldNumClick[i]+=iNumClick+iNumUnClick;
-
+		
+		iOldNumClick[i] += iNumClick + iNumUnClick;
+		
 		if(!bMouseButton[i] && iOldNumClick[i] == iNumUnClick) {
-			iOldNumClick[i]=0;
+			iOldNumClick[i] = 0;
 		}
-
-		bOldMouseButton[i]=bMouseButton[i];
-
+		
+		bOldMouseButton[i] = bMouseButton[i];
+		
 		if(bMouseButton[i]) {
 			if(iOldNumClick[i]) {
-				bMouseButton[i]=false;
+				bMouseButton[i] = false;
 			}
 		} else {
 			if(iOldNumClick[i]) {
-				bMouseButton[i]=true;
+				bMouseButton[i] = true;
 			}
 		}
-
+		
 		if(iOldNumClick[i]) 
 			iOldNumClick[i]--;
 		
 		int iDTime;
-		backend->isMouseButtonPressed(buttonId,iDTime);
-
+		backend->isMouseButtonPressed(buttonId, iDTime);
+		
 		if(iDTime) {
-			iMouseTime[i]=iDTime;
-			iMouseTimeSet[i]=2;
+			iMouseTime[i] = iDTime;
+			iMouseTimeSet[i] = 2;
 		} else {
-			arxtime.update(false);
-			if(iMouseTimeSet[i] > 0 && (arxtime.now_f() - iMouseTime[i]) > 300) {
-				iMouseTime[i]=0;
-				iMouseTimeSet[i]=0;
+			if(iMouseTimeSet[i] > 0 && (now - iMouseTime[i]) > 300) {
+				iMouseTime[i] = 0;
+				iMouseTimeSet[i] = 0;
 			}
-
+			
 			if(getMouseButtonNowPressed(buttonId)) {
 				switch(iMouseTimeSet[i]) {
 				case 0:
@@ -470,7 +468,7 @@ void Input::update() {
 		// Use the sensitivity config value to adjust relative mouse mouvements
 		float fSensMax = 1.f / 6.f;
 		float fSensMin = 2.f;
-		float fSens = ( ( fSensMax - fSensMin ) * ( (float)iSensibility ) / 10.f ) + fSensMin;
+		float fSens = ( ( fSensMax - fSensMin ) * float(iSensibility) / 10.f ) + fSensMin;
 		fSens = std::pow(0.7f, fSens) * 2.f;
 		iMouseR *= fSens;
 		
@@ -486,7 +484,7 @@ void Input::update() {
 	
 }
 
-std::map<std::string, InputKeyId> keyNames;
+static std::map<std::string, InputKeyId> keyNames;
 
 std::string Input::getKeyName(InputKeyId key, bool localizedName) {
 	
@@ -503,20 +501,20 @@ std::string Input::getKeyName(InputKeyId key, bool localizedName) {
 		key &= INPUT_MASK;
 	}
 	
-	if(key >= (InputKeyId)Mouse::ButtonBase && key < (InputKeyId)Mouse::ButtonMax) {
+	if(key >= InputKeyId(Mouse::ButtonBase) && key < InputKeyId(Mouse::ButtonMax)) {
 		
 		std::ostringstream oss;
-		oss << PREFIX_BUTTON << (int)(key - Mouse::ButtonBase + 1);
+		oss << PREFIX_BUTTON << int(key - Mouse::ButtonBase + 1);
 		name = oss.str();
 	
-	} else if(key == (InputKeyId)Mouse::Wheel_Up) {
+	} else if(key == InputKeyId(Mouse::Wheel_Up)) {
 		name = "WheelUp";
 
-	} else if(key == (InputKeyId)Mouse::Wheel_Down) {
+	} else if(key == InputKeyId(Mouse::Wheel_Down)) {
 		name = "WheelDown";
 
 	} else {
-		arx_assert(key >= 0 && key < (int)ARRAY_SIZE(keysDescriptions));
+		arx_assert(key >= 0 && key < int(ARRAY_SIZE(keysDescriptions)));
 		const KeyDescription & entity = keysDescriptions[key];
 		
 		arx_assert(entity.id == key);
@@ -525,7 +523,7 @@ std::string Input::getKeyName(InputKeyId key, bool localizedName) {
 	
 	if(name.empty()) {
 		std::ostringstream oss;
-		oss << PREFIX_KEY << (int)key;
+		oss << PREFIX_KEY << int(key);
 		name = oss.str();
 	}
 	
@@ -571,8 +569,8 @@ InputKeyId Input::getKeyId(const std::string & name) {
 		for(size_t i = 0; i < ARRAY_SIZE(keysDescriptions); i++) {
 			keyNames[keysDescriptions[i].name] = keysDescriptions[i].id;
 		}
-		keyNames["WheelUp"] = (InputKeyId)Mouse::Wheel_Up;
-		keyNames["WheelDown"] = (InputKeyId)Mouse::Wheel_Down;
+		keyNames["WheelUp"] = InputKeyId(Mouse::Wheel_Up);
+		keyNames["WheelDown"] = InputKeyId(Mouse::Wheel_Down);
 	}
 	
 	std::map<std::string, InputKeyId>::const_iterator it = keyNames.find(name);
@@ -779,9 +777,11 @@ bool Input::getMouseButtonNowUnPressed(int buttonId) const {
 	return !bMouseButton[buttonIdx] && bOldMouseButton[buttonIdx];
 }
 
-bool Input::getMouseButtonDoubleClick(int buttonId, int timeMs) const {
+bool Input::getMouseButtonDoubleClick(int buttonId) const {
 	arx_assert(buttonId >= Mouse::ButtonBase && buttonId < Mouse::ButtonMax);
-
+	
+	int timeMs = 300;
+	
 	int buttonIdx = buttonId - Mouse::ButtonBase;
 	return (iMouseTimeSet[buttonIdx] == 2) && (iMouseTime[buttonIdx] < timeMs);
 }

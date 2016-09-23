@@ -120,12 +120,14 @@ public:
 		return checked_range_cast<ArxInstant>(m_now_us / 1000);
 	}
 	
-	void update(bool use_pause = true) {
-		if (is_paused() && use_pause) {
+	void update() {
+		if (is_paused()) {
 			m_now_us = platform::getElapsedUs(start_time, pause_time);
 		} else {
 			m_now_us = platform::getElapsedUs(start_time);
 		}
+		frame_time_us = m_now_us;
+		frame_delay_ms = (frame_time_us - last_frame_time_us) / 1000.f;
 	}
 	
 	bool is_paused() const { 
@@ -143,12 +145,6 @@ public:
 	
 	float get_frame_delay() const {
 		return frame_delay_ms;
-	}
-	
-	void update_frame_time() {
-		update();
-		frame_time_us = m_now_us;
-		frame_delay_ms = (frame_time_us - last_frame_time_us) / 1000.0f;
 	}
 	
 	void update_last_frame_time() {

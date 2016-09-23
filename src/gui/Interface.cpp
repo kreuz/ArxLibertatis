@@ -128,7 +128,6 @@ ZeniMax Media Inc., Suite 120, Rockville, Maryland 20850 USA.
 #include "window/RenderWindow.h"
 
 
-extern float Original_framedelay;
 extern EERIE_3DOBJ *arrowobj;
 
 struct ARX_INTERFACE_HALO_STRUCT
@@ -142,10 +141,10 @@ struct ARX_INTERFACE_HALO_STRUCT
 
 extern TextureContainer * inventory_font;
 
-extern float PLAYER_ROTATION;
+extern AnimationDuration PLAYER_ROTATION;
 extern float SLID_VALUE;
 
-long lSLID_VALUE = 0;
+float lSLID_VALUE = 0;
 
 extern bool BLOCK_PLAYER_CONTROLS;
 extern long DeadTime;
@@ -545,7 +544,7 @@ void ARX_INTERFACE_NoteManage() {
 void ResetPlayerInterface() {
 	player.Interface |= INTER_LIFE_MANA;
 	g_hudRoot.playerInterfaceFader.resetSlid();
-	lSLID_VALUE = 0;
+	lSLID_VALUE = 0.f;
 	SLID_START = g_platformTime.frameStart();
 }
 
@@ -1035,7 +1034,7 @@ void ArxGame::managePlayerControls() {
 				}
 
 				if(!npc) {
-					MagicSightFader+=g_framedelay*( 1.0f / 200 );
+					MagicSightFader += toMs(g_platformTime.lastFrameDuration()) * ( 1.0f / 200 );
 
 					if(MagicSightFader > 1.f)
 						MagicSightFader = 1.f;
@@ -1670,7 +1669,7 @@ void ArxGame::manageKeyMouse() {
 	}
 	
 	LAST_PLAYER_MOUSELOOK_ON = mouselook;
-	PLAYER_ROTATION=0;
+	PLAYER_ROTATION = AnimationDuration_ZERO;
 
 	Vec2f mouseDiff = Vec2f(GInput->getMousePosRel());
 	
@@ -1696,62 +1695,67 @@ void ArxGame::manageKeyMouse() {
 		bool bKeySpecialMove=false;
 		
 		struct PushTime {
-			unsigned long turnLeft;
-			unsigned long turnRight;
-			unsigned long lookUp;
-			unsigned long lookDown;
+			PlatformInstant turnLeft;
+			PlatformInstant turnRight;
+			PlatformInstant lookUp;
+			PlatformInstant lookDown;
 		};
 		
-		static PushTime pushTime = {0, 0, 0, 0};
+		static PushTime pushTime = {
+			PlatformInstant_ZERO,
+			PlatformInstant_ZERO,
+			PlatformInstant_ZERO,
+			PlatformInstant_ZERO
+		};
 		
 		if(!GInput->actionPressed(CONTROLS_CUST_STRAFE)) {
-			arxtime.update();
-			const ArxInstant now = arxtime.now();
+			const PlatformInstant now = g_platformTime.frameStart();
 
 			if(GInput->actionPressed(CONTROLS_CUST_TURNLEFT)) {
-				if(!pushTime.turnLeft)
+				if(pushTime.turnLeft == PlatformInstant_ZERO)
 					pushTime.turnLeft = now;
 
 				bKeySpecialMove = true;
 			}
 			else
-				pushTime.turnLeft = 0;
+				pushTime.turnLeft = PlatformInstant_ZERO;
 
 			if(GInput->actionPressed(CONTROLS_CUST_TURNRIGHT)) {
-				if(!pushTime.turnRight)
+				if(pushTime.turnRight == PlatformInstant_ZERO)
 					pushTime.turnRight = now;
 
 				bKeySpecialMove = true;
 			}
 			else
-				pushTime.turnRight = 0;
+				pushTime.turnRight = PlatformInstant_ZERO;
 		}
 
 		if(USE_PLAYERCOLLISIONS) {
-			arxtime.update();
-			const ArxInstant now = arxtime.now();
+			const PlatformInstant now = g_platformTime.frameStart();
 
 			if(GInput->actionPressed(CONTROLS_CUST_LOOKUP)) {
-				if(!pushTime.lookUp)
+				if(pushTime.lookUp == PlatformInstant_ZERO)
 					pushTime.lookUp = now;
 
 				bKeySpecialMove = true;
 			}
 			else
-				pushTime.lookUp = 0;
+				pushTime.lookUp = PlatformInstant_ZERO;
 
 			if(GInput->actionPressed(CONTROLS_CUST_LOOKDOWN)) {
-				if(!pushTime.lookDown)
+				if(pushTime.lookDown == PlatformInstant_ZERO)
 					pushTime.lookDown = now;
 
 				bKeySpecialMove = true;
 			}
 			else
-				pushTime.lookDown = 0;
+				pushTime.lookDown = PlatformInstant_ZERO;
 		}
 
 		if(bKeySpecialMove) {
-			if(pushTime.turnLeft || pushTime.turnRight) {
+			if(   pushTime.turnLeft  != PlatformInstant_ZERO
+			   || pushTime.turnRight != PlatformInstant_ZERO
+			) {
 				if(pushTime.turnLeft < pushTime.turnRight)
 					mouseDiff.x = 10.f;
 				else
@@ -1760,7 +1764,9 @@ void ArxGame::manageKeyMouse() {
 				mouseDiff.x = 0.f;
 			}
 
-			if(pushTime.lookUp || pushTime.lookDown) {
+			if(   pushTime.lookUp   != PlatformInstant_ZERO
+			   || pushTime.lookDown != PlatformInstant_ZERO
+			) {
 				if(pushTime.lookUp < pushTime.lookDown)
 					mouseDiff.y = 10.f;
 				else
@@ -1775,17 +1781,17 @@ void ArxGame::manageKeyMouse() {
 			bool dragging = GInput->getMouseButtonRepeat(Mouse::Button_0);
 			
 			static bool mouseInBorder = false;
-			static ArxInstant mouseInBorderTime = ArxInstant_ZERO;
+			static PlatformInstant mouseInBorderTime = PlatformInstant_ZERO;
 			
 			if(!bRenderInCursorMode || (!dragging && !GInput->isMouseInWindow())) {
 				mouseInBorder = false;
 			} else {
 				
 				int borderSize = 10;
-				ArxDuration borderDelay = ArxDurationMs(100);
+				PlatformDuration borderDelay = PlatformDurationMs(100);
 				if(!dragging && !mainApp->getWindow()->isFullScreen()) {
 					borderSize = 50;
-					borderDelay = ArxDurationMs(200);
+					borderDelay = PlatformDurationMs(200);
 				}
 				
 				int distLeft = DANAEMouse.x - g_size.left;
@@ -1798,7 +1804,7 @@ void ArxGame::manageKeyMouse() {
 				   || (!dragging && distBottom < g_size.height() / 4 && distRight <= borderSize)
 				   || (!dragging && distTop <= 4 * borderSize && distRight <= 4 * borderSize)) {
 					borderSize = 2;
-					borderDelay = ArxDurationMs(600);
+					borderDelay = PlatformDurationMs(600);
 				}
 				
 				mouseDiff = Vec2f_ZERO;
@@ -1827,11 +1833,13 @@ void ArxGame::manageKeyMouse() {
 				   && distTop >= 3 * borderSize && distBottom >= 3 * borderSize) {
 					mouseInBorder = false;
 				} else if(!mouseInBorder) {
-					mouseInBorderTime = arxtime.now();
+					mouseInBorderTime = g_platformTime.frameStart();
 					mouseInBorder = true;
 				}
 				
-				if(borderDelay > 0 && arxtime.now() - mouseInBorderTime < borderDelay) {
+				if(   borderDelay > PlatformDuration_ZERO
+				   && g_platformTime.frameStart() - mouseInBorderTime < borderDelay
+				) {
 					mouseDiff = Vec2f_ZERO;
 				} else {
 					bKeySpecialMove = true;
@@ -1896,7 +1904,7 @@ void ArxGame::manageKeyMouse() {
 				if(rotation.x != 0.f)
 					player.m_currentMovement |= PLAYER_ROTATE;
 
-				PLAYER_ROTATION = rotation.x;
+				PLAYER_ROTATION = AnimationDurationUs(s64(rotation.x * 5.f * 1000.f));
 
 				player.desiredangle.setYaw(player.angle.getYaw());
 				player.desiredangle.setYaw(MAKEANGLE(player.desiredangle.getYaw() - rotation.x));
@@ -1955,7 +1963,8 @@ void ArxGame::manageEntityDescription() {
 			Rect rDraw(x, y, w, h);
 			pTextManage->Clear();
 			if(!config.input.autoDescription) {
-				pTextManage->AddText(hFontInBook, description, rDraw, Color(232, 204, 143), 2000 + description.length()*60);
+				PlatformDuration duration = PlatformDurationMs(2000 + description.length() * 60);
+				pTextManage->AddText(hFontInBook, description, rDraw, Color(232, 204, 143), duration);
 			} else {
 				pTextManage->AddText(hFontInBook, description, rDraw, Color(232, 204, 143));
 			}

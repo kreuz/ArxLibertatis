@@ -485,7 +485,7 @@ struct SavedAnimUse {
 		a.cur_anim = NULL;
 		a.altidx_next = altidx_next;
 		a.altidx_cur = altidx_cur;
-		a.ctime = ctime;
+		a.ctime = AnimationDurationMs(ctime);
 		a.flags = AnimUseType::load(flags);
 		a.nextflags = AnimUseType::load(nextflags);
 		a.lastframe = lastframe;
@@ -499,7 +499,7 @@ struct SavedAnimUse {
 		cur_anim = 0;
 		altidx_next = b.altidx_next;
 		altidx_cur = b.altidx_cur;
-		ctime = b.ctime;
+		ctime = toMsi(b.ctime);
 		flags = b.flags;
 		nextflags = b.nextflags;
 		lastframe = b.lastframe;
@@ -1128,7 +1128,7 @@ struct SavedCamera {
 		
 		clip3D = 0;
 		type = CAM_SUBJVIEW;
-		bkgcolor = b.bkgcolor.toBGRA();
+		bkgcolor = b.bkgcolor.toBGRA().t;
 		nbdrawn = 0;
 		cdepth = b.cdepth;
 		

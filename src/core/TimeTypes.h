@@ -25,8 +25,94 @@
 #include "platform/Platform.h"
 #include "util/StrongType.h"
 
-ARX_STRONG_TYPEDEF(s64, ArxInstant)
-ARX_STRONG_TYPEDEF(s64, ArxDuration)
+
+template <typename TAG, typename T>
+struct DurationType
+	: boost::totally_ordered1<DurationType<TAG, T>
+	, boost::additive1<DurationType<TAG, T>
+	> >
+{
+	T t;
+	
+	DurationType()
+		: t()
+	{ }
+	explicit DurationType(const T t_)
+		: t(t_)
+	{ }
+	DurationType(const DurationType<TAG, T> & t_)
+		: t(t_.t)
+	{ }
+	bool operator==(const DurationType<TAG, T> & rhs) const {
+		return t == rhs.t;
+	}
+	bool operator<(const DurationType<TAG, T> & rhs) const {
+		return t < rhs.t;
+	}
+	DurationType<TAG, T> & operator=(const DurationType<TAG, T> & rhs) {
+		t = rhs.t;
+		return *this;
+	}
+	DurationType<TAG, T> & operator+=(const DurationType<TAG, T> & rhs) {
+		this->t += rhs.t;
+		return *this;
+	}
+	DurationType<TAG, T> & operator-=(const DurationType<TAG, T> & rhs) {
+		this->t -= rhs.t;
+		return *this;
+	}
+};
+
+template <typename TAG, typename T>
+struct InstantType
+	: boost::totally_ordered1<InstantType<TAG, T>
+	>
+{
+	T t;
+	
+	InstantType()
+		: t()
+	{ }
+	explicit InstantType(const T t_)
+		: t(t_)
+	{ }
+	InstantType(const InstantType<TAG, T> & t_)
+		: t(t_.t)
+	{ }
+	bool operator==(const InstantType<TAG, T> & rhs) const {
+		return t == rhs.t;
+	}
+	bool operator<(const InstantType<TAG, T> & rhs) const {
+		return t < rhs.t;
+	}
+	InstantType<TAG, T> & operator=(const InstantType<TAG, T> & rhs) {
+		t = rhs.t;
+		return *this;
+	}
+};
+template <typename TAG, typename T>
+inline DurationType<TAG, T> operator -(InstantType<TAG, T> a, InstantType<TAG, T> b) {
+	return DurationType<TAG, T>(a.t - b.t);
+}
+template <typename TAG, typename T>
+inline InstantType<TAG, T> operator +(InstantType<TAG, T> a, DurationType<TAG, T> b) {
+	return InstantType<TAG, T>(a.t + b.t);
+}
+template <typename TAG, typename T>
+inline InstantType<TAG, T> operator -(InstantType<TAG, T> a, DurationType<TAG, T> b) {
+	return InstantType<TAG, T>(a.t - b.t);
+}
+
+// ArxTime
+// in ms
+typedef StrongType<struct ArxInstant_TAG,  s64> ArxInstant;
+
+//#define ARX_REFACTOR_TIMETYPES 1
+#ifdef ARX_REFACTOR_TIMETYPES
+typedef DurationType<struct ArxTime_TAG, s64> ArxDuration;
+#else
+typedef StrongType<struct ArxDuration_TAG, s64> ArxDuration;
+#endif
 
 const ArxInstant  ArxInstant_ZERO  = ArxInstant(0);
 const ArxDuration ArxDuration_ZERO = ArxDuration(0);
@@ -55,18 +141,19 @@ inline ArxInstant operator -(ArxInstant a, ArxDuration b) {
 	return ArxInstant(a.t - b.t);
 }
 
+#ifndef ARX_REFACTOR_TIMETYPES
 inline ArxDuration operator +(ArxDuration a, ArxDuration b) {
 	return ArxDuration(a.t + b.t);
 }
 inline ArxDuration operator -(ArxDuration a, ArxDuration b) {
 	return ArxDuration(a.t - b.t);
 }
+#endif
 
-// FIXME copy-paste
-
+// PlatformTime
 // in microseconds
-typedef StrongType<struct PlatformInstant_TAG,  s64> PlatformInstant;
-typedef StrongType<struct PlatformDuration_TAG, s64> PlatformDuration;
+typedef InstantType <struct PlatformTime_TAG, s64> PlatformInstant;
+typedef DurationType<struct PlatformTime_TAG, s64> PlatformDuration;
 
 const PlatformInstant  PlatformInstant_ZERO  = PlatformInstant(0);
 const PlatformDuration PlatformDuration_ZERO = PlatformDuration(0);
@@ -74,35 +161,57 @@ const PlatformDuration PlatformDuration_ZERO = PlatformDuration(0);
 inline PlatformInstant PlatformInstantMs(s64 val) {
 	return PlatformInstant(val * 1000);
 }
+
+inline PlatformDuration PlatformDurationUs(s64 val) {
+	return PlatformDuration(val);
+}
 inline PlatformDuration PlatformDurationMs(s64 val) {
 	return PlatformDuration(val * 1000);
 }
 
-inline double toMs(PlatformDuration val) {
-	return val.t / (1000.0);
+inline float toMs(PlatformDuration val) {
+	return val.t / (1000.f);
 }
 inline double toS(PlatformDuration val) {
 	return val.t / (1000.0 * 1000.0);
 }
 
-inline PlatformDuration operator -(PlatformInstant a, PlatformInstant b) {
-	return PlatformDuration(a.t - b.t);
-}
-inline PlatformInstant operator +(PlatformInstant a, PlatformDuration b) {
-	return PlatformInstant(a.t + b.t);
-}
-inline PlatformInstant operator -(PlatformInstant a, PlatformDuration b) {
-	return PlatformInstant(a.t - b.t);
+// AnimationTime
+// in microseconds
+typedef DurationType<struct AnimationTime_TAG, s64> AnimationDuration;
+const AnimationDuration AnimationDuration_ZERO = AnimationDuration(0);
+
+inline AnimationDuration operator*(AnimationDuration v, float scalar) {
+	return AnimationDuration(s64(float(v.t) * scalar));
 }
 
-inline PlatformDuration operator +(PlatformDuration a, PlatformDuration b) {
-	return PlatformDuration(a.t + b.t);
+inline AnimationDuration AnimationDurationUs(s64 val) {
+	return AnimationDuration(val);
 }
-inline PlatformDuration operator -(PlatformDuration a, PlatformDuration b) {
-	return PlatformDuration(a.t - b.t);
+inline AnimationDuration AnimationDurationMs(s64 val) {
+	return AnimationDuration(val * 1000);
 }
 
-// copy-paste end
+inline s64 toMsi(AnimationDuration val) {
+	return val.t / (1000);
+}
+inline float toMsf(AnimationDuration val) {
+	return val.t / (1000.f);
+}
+inline float toS(AnimationDuration val) {
+	return val.t / (1000.f * 1000.f);
+}
+
+inline AnimationDuration toAnimationDuration(PlatformDuration val) {
+	return AnimationDuration(val.t);
+}
+inline AnimationDuration toAnimationDuration(ArxDuration val) {
+	return AnimationDuration(val.t * 1000);
+}
+inline ArxDuration toArxDuration(AnimationDuration val) {
+	return ArxDuration(val.t / 1000);
+}
+
 
 
 namespace arx {

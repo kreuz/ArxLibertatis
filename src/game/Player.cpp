@@ -150,7 +150,7 @@ ARXCHARACTER player;
 EERIE_3DOBJ * hero = NULL;
 float currentdistance = 0.f;
 float CURRENT_PLAYER_COLOR = 0;
-float PLAYER_ROTATION = 0;
+AnimationDuration PLAYER_ROTATION = AnimationDuration_ZERO;
 
 bool USE_PLAYERCOLLISIONS = true;
 bool BLOCK_PLAYER_CONTROLS = false;
@@ -1059,12 +1059,14 @@ void ARX_PLAYER_Poison(float val) {
  *
  * Updates: life/mana recovery, poison evolution, hunger, invisibility
  */
-void ARX_PLAYER_FrameCheck(float Framedelay)
+void ARX_PLAYER_FrameCheck(PlatformDuration delta)
 {
 	ARX_PROFILE_FUNC();
 	
 	//	ARX_PLAYER_QuickGeneration();
-	if(Framedelay > 0) {
+	if(delta > PlatformDuration_ZERO) {
+		float Framedelay = float(toMs(delta));
+		
 		UpdateIOInvisibility(entities.player());
 		// Natural LIFE recovery
 		float inc = 0.00008f * Framedelay * (player.m_attributeFull.constitution + player.m_attributeFull.strength * ( 1.0f / 2 ) + player.m_skillFull.defense) * ( 1.0f / 50 );
@@ -1449,7 +1451,7 @@ void ARX_PLAYER_Manage_Visual() {
 	   && LASTPLAYERA > 60.f
 	   && LASTPLAYERA < 180.f
 	) {
-		if(PLAYER_ROTATION < 0) {
+		if(PLAYER_ROTATION < AnimationDuration_ZERO) {
 			if(player.Interface & INTER_COMBATMODE)
 				request0_anim = alist[ANIM_U_TURN_LEFT_FIGHT];
 			else
@@ -1466,30 +1468,18 @@ void ARX_PLAYER_Manage_Visual() {
 		if(layer0.cur_anim == alist[ANIM_U_TURN_LEFT]
 		   || layer0.cur_anim == alist[ANIM_U_TURN_LEFT_FIGHT])
 		{
-			float fv = PLAYER_ROTATION * 5;
-			long vv = fv;
-			io->frameloss -= fv - (float)vv;
+			layer0.ctime -= PLAYER_ROTATION;
 			
-			if (io->frameloss < 0) io->frameloss = 0;
-			
-			layer0.ctime -= vv;
-			
-			if(layer0.ctime < 0)
-				layer0.ctime = 0;
+			if(layer0.ctime < AnimationDuration_ZERO)
+				layer0.ctime = AnimationDuration_ZERO;
 		}
 		else if(layer0.cur_anim == alist[ANIM_U_TURN_RIGHT]
 				 ||	layer0.cur_anim == alist[ANIM_U_TURN_RIGHT_FIGHT])
 		{
-			float fv = PLAYER_ROTATION * 5;
-			long vv = fv;
-			io->frameloss += fv - (float)vv;
+			layer0.ctime += PLAYER_ROTATION;
 			
-			if (io->frameloss < 0) io->frameloss = 0;
-			
-			layer0.ctime += vv;
-			
-			if(layer0.ctime < 0)
-				layer0.ctime = 0;
+			if(layer0.ctime < AnimationDuration_ZERO)
+				layer0.ctime = AnimationDuration_ZERO;
 		}
 	}
 	
@@ -1700,7 +1690,7 @@ retry:
 				} else if(layer0.cur_anim == alist[ANIM_JUMP_END_PART2]
 						 && glm::abs(player.physics.velocity.x)
 							 + glm::abs(player.physics.velocity.z) > (4.f/TARGET_DT)
-						 && layer0.ctime > 1) {
+						 && layer0.ctime > AnimationDurationMs(1)) {
 					AcquireLastAnim(io);
 					player.jumpphase = NotJumping;
 					goto retry;
@@ -1914,7 +1904,6 @@ static long LAST_FIRM_GROUND = 1;
 static long TRUE_FIRM_GROUND = 1;
 float lastposy = -9999999.f;
 ArxInstant REQUEST_JUMP = ArxInstant_ZERO;
-extern float Original_framedelay;
 
 ArxInstant LAST_JUMP_ENDTIME = ArxInstant_ZERO;
 
@@ -1978,7 +1967,7 @@ void ARX_PLAYER_Manage_Movement() {
 
 	static float StoredTime = 0;
 
-	float DeltaTime = std::min(Original_framedelay, MAX_FRAME_TIME);
+	float DeltaTime = std::min(toMs(g_platformTime.lastFrameDuration()), MAX_FRAME_TIME);
 	DeltaTime = StoredTime + DeltaTime * speedfactor;
 	
 	if(player.jumpphase != NotJumping) {
@@ -2202,8 +2191,8 @@ void PlayerMovementIterate(float DeltaTime) {
 				} else {
 					short idx = layer0.altidx_cur;
 					Vec3f mv = GetAnimTotalTranslate(layer0.cur_anim, idx);
-					float time = layer0.cur_anim->anims[idx]->anim_time;
-					scale = glm::length(mv) / time * 0.0125f;
+					AnimationDuration time = layer0.cur_anim->anims[idx]->anim_time;
+					scale = glm::length(mv) / toMsf(time) * 0.0125f;
 				}
 			}
 			

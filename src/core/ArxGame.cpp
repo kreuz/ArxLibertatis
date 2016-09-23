@@ -178,7 +178,6 @@ extern long DeadTime;
 static const float CURRENT_BASE_FOCAL = 310.f;
 static const float defaultCameraFocal = 350.f;
 
-extern Cinematic* ControlCinematique;
 extern EERIE_3DOBJ * arrowobj;
 
 extern Entity * FlyingOverIO;
@@ -917,8 +916,7 @@ bool ArxGame::initGame()
 	
 	LogDebug("Before Run...");
 	
-	const Vec2i & size = getWindow()->getSize();
-	ControlCinematique = new Cinematic(size);
+	cinematicInit();
 	
 	long old = GLOBAL_EERIETEXTUREFLAG_LOADSCENE_RELEASE;
 	GLOBAL_EERIETEXTUREFLAG_LOADSCENE_RELEASE = -1;
@@ -1111,7 +1109,7 @@ void ArxGame::shutdownGame() {
 	DanaeClearLevel(2);
 	TextureContainer::DeleteAll();
 	
-	delete ControlCinematique, ControlCinematique = NULL;
+	cinematicDestroy();
 	
 	config.save();
 	
@@ -1310,14 +1308,14 @@ void ArxGame::doFrame() {
 	if(cinematicIsStopped()
 	   && !cinematicBorder.isActive()
 	   && !BLOCK_PLAYER_CONTROLS
-	   && ARXmenu.currentmode == AMCM_OFF
 	) {
 		
-		if(GInput->actionNowPressed(CONTROLS_CUST_QUICKLOAD)) {
+		if(GInput->actionNowPressed(CONTROLS_CUST_QUICKLOAD) && savegames.size() > 0) {
+			ARXmenu.currentmode = AMCM_OFF;
 			ARX_QuickLoad();
 		}
 		
-		if(GInput->actionNowPressed(CONTROLS_CUST_QUICKSAVE)) {
+		if(GInput->actionNowPressed(CONTROLS_CUST_QUICKSAVE) && ARXmenu.currentmode == AMCM_OFF) {
 			g_hudRoot.quickSaveIconGui.show();
 			GRenderer->getSnapshot(savegame_thumbnail, config.interface.thumbnailSize.x, config.interface.thumbnailSize.y);
 			ARX_QuickSave();
@@ -1346,7 +1344,7 @@ void ArxGame::updateFirstPersonCamera() {
 		&& (layer1.cur_anim!=alist[ANIM_MISSILE_STRIKE_PART_2])
 		&& (layer1.cur_anim!=alist[ANIM_MISSILE_STRIKE_CYCLE]))
 	{
-		player.m_bowAimRatio -= bowZoomFromDuration(Original_framedelay);
+		player.m_bowAimRatio -= bowZoomFromDuration(toMs(g_platformTime.lastFrameDuration()));
 
 		if(player.m_bowAimRatio < 0)
 			player.m_bowAimRatio = 0;
@@ -1420,7 +1418,6 @@ void ArxGame::speechControlledCinematic() {
 		const CinematicSpeech & acs = aspeech[valid].cine;
 		const Entity * io = aspeech[valid].io;
 		
-		arxtime.update();
 		float elapsed = arxtime.now_f() - aspeech[valid].time_creation;
 		float rtime = elapsed / aspeech[valid].duration;
 
@@ -1617,20 +1614,21 @@ void ArxGame::updateActiveCamera() {
 }
 
 void ArxGame::updateTime() {
-	arxtime.update_frame_time();
+	
+	arxtime.update();
 
 	// before modulation by "GLOBAL_SLOWDOWN"
-	Original_framedelay = arxtime.get_frame_delay();
-	arx_assert(Original_framedelay >= 0.0f);
+	float Original_framedelay = arxtime.get_frame_delay();
+	arx_assert(Original_framedelay >= 0.f);
 
 	// TODO this code shouldn't exist. ARXStartTime should be constant.
 	if (GLOBAL_SLOWDOWN != 1.0f) {
 		
-		float drift = Original_framedelay * (1.0f - GLOBAL_SLOWDOWN) * 1000.0f;
+		float drift = Original_framedelay * (1.0f - GLOBAL_SLOWDOWN) * 1000.f;
 		arxtime.increment_start_time(static_cast<u64>(drift));
 
 		// recalculate frame delta
-		arxtime.update_frame_time();
+		arxtime.update();
 	}
 
 	g_framedelay = arxtime.get_frame_delay();
@@ -1649,9 +1647,9 @@ void ArxGame::updateInput() {
 	// Handle double clicks.
 	const ActionKey & button = config.actions[CONTROLS_CUST_ACTION];
 	if((button.key[0] != -1 && (button.key[0] & Mouse::ButtonBase)
-	    && GInput->getMouseButtonDoubleClick(button.key[0], 300))
+	    && GInput->getMouseButtonDoubleClick(button.key[0]))
 	   || (button.key[1] != -1 && (button.key[1] & Mouse::ButtonBase)
-	    && GInput->getMouseButtonDoubleClick(button.key[1], 300))) {
+	    && GInput->getMouseButtonDoubleClick(button.key[1]))) {
 		EERIEMouseButton |= 4;
 		EERIEMouseButton &= ~1;
 	}
@@ -1844,13 +1842,14 @@ void ArxGame::updateLevel() {
 		ManageNONCombatModeAnimations();
 		
 		{
+			AnimationDuration framedelay = toAnimationDuration(g_platformTime.lastFrameDuration());
 			Entity * entity = entities.player();
 			
 			EERIEDrawAnimQuatUpdate(entity->obj,
 			                        entity->animlayer,
 			                        entity->angle,
 			                        entity->pos,
-			                        Original_framedelay,
+			                        framedelay,
 			                        entity,
 			                        true);
 		}
@@ -1872,7 +1871,7 @@ void ArxGame::updateLevel() {
 	
 	UpdateCameras();
 
-	ARX_PLAYER_FrameCheck(Original_framedelay);
+	ARX_PLAYER_FrameCheck(g_platformTime.lastFrameDuration());
 
 	updateActiveCamera();
 
@@ -2099,7 +2098,7 @@ void ArxGame::renderLevel() {
 	GRenderer->GetTextureStage(0)->setWrapMode(TextureStage::WrapRepeat);
 
 	if(pTextManage && !pTextManage->Empty()) {
-		pTextManage->Update(g_framedelay);
+		pTextManage->Update(g_platformTime.lastFrameDuration());
 		pTextManage->Render();
 	}
 

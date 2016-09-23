@@ -47,6 +47,7 @@ ZeniMax Media Inc., Suite 120, Rockville, Maryland 20850 USA.
 #include <vector>
 #include <string>
 
+#include "core/TimeTypes.h"
 #include "graphics/Color.h"
 #include "gui/widget/ButtonWidget.h"
 #include "gui/widget/TextWidget.h"
@@ -95,8 +96,7 @@ private:
 	
 	bool				bMouseAttack;
 	
-	static const int m_blinkDuration = 300;
-	float m_blinkTime;
+	PlatformDuration m_blinkTime;
 	bool m_blink;
 };
 
@@ -113,7 +113,7 @@ public:
 	virtual ~CWindowMenu();
 	
 	void add(MenuPage * page);
-	void Update(float time);
+	void Update(PlatformDuration time);
 	MENUSTATE Render();
 	
 	std::vector<MenuPage *>	m_pages;

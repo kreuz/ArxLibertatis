@@ -129,7 +129,7 @@ public:
 	bool getMouseButtonRepeat(int buttonId) const;
 	bool getMouseButtonNowPressed(int buttonId) const;
 	bool getMouseButtonNowUnPressed(int buttonId) const;
-	bool getMouseButtonDoubleClick(int buttonId, int timeMs) const;
+	bool getMouseButtonDoubleClick(int buttonId) const;
 	
 	int getMouseWheelDir() const { return iWheelDir; }
 	
@@ -163,7 +163,7 @@ private:
 	bool  bMouseButton[Mouse::ButtonCount];
 	bool  bOldMouseButton[Mouse::ButtonCount];
 	
-	int   iMouseTime[Mouse::ButtonCount];
+	s64   iMouseTime[Mouse::ButtonCount];
 	int   iMouseTimeSet[Mouse::ButtonCount];
 	int   iOldNumClick[Mouse::ButtonCount];
 	
