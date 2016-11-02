@@ -134,8 +134,8 @@ void DamageRequestEnd(DamageHandle handle) {
 
 extern Vec3f PUSH_PLAYER_FORCE;
 
-float Blood_Pos = 0.f;
-long Blood_Duration = 0;
+static float Blood_Pos = 0.f;
+static long Blood_Duration = 0;
 
 static void ARX_DAMAGES_IgnitIO(Entity * io, float dmg)
 {
@@ -1344,10 +1344,7 @@ void DoSphericDamage(const Sphere & sphere, float dmg, DamageArea flags, DamageT
 			}
 		}
 		
-		float ratio = ((float)count / ((float)ioo->obj->vertexlist.size() * ( 1.0f / 2 )));
-		
-		if(count2 > count)
-			ratio = ((float)count2 / ((float)ioo->obj->vertexlist.size() * ( 1.0f / 2 )));
+		float ratio = glm::max(count, count2) / (ioo->obj->vertexlist.size() * ( 1.0f / 2 ));
 		
 		if(ratio > 2.f)
 			ratio = 2.f;

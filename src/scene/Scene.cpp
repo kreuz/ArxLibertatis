@@ -189,7 +189,7 @@ static std::vector<EERIEPOLY*> vPolyWater;
 static std::vector<EERIEPOLY*> vPolyLava;
 
 static std::vector<PORTAL_ROOM_DRAW> RoomDraw;
-static std::vector<long> RoomDrawList;
+static std::vector<size_t> RoomDrawList;
 
 //*************************************************************************************
 //*************************************************************************************
@@ -579,9 +579,10 @@ long ARX_PORTALS_GetRoomNumForPosition(const Vec3f & pos,long flag) {
 		float nearest_dist = 99999.f;
 
 		for(size_t n = 0; n < portals->rooms.size(); n++) {
-			for(long lll = 0; lll < portals->rooms[n].nb_portals; lll++) {
-				EERIE_PORTALS *po = &portals->portals[portals->rooms[n].portals[lll]];
-				EERIEPOLY *epp = &po->poly;
+			const EERIE_ROOM_DATA & room = portals->rooms[n];
+			for(long lll = 0; lll < room.nb_portals; lll++) {
+				const EERIE_PORTALS & po = portals->portals[room.portals[lll]];
+				const EERIEPOLY *epp = &po.poly;
 
 				if(PointIn2DPolyXZ(epp, pos.x, pos.z)) {
 					float yy;
@@ -590,9 +591,9 @@ long ARX_PORTALS_GetRoomNumForPosition(const Vec3f & pos,long flag) {
 						if(height > yy) {
 							if(yy >= pos.y && yy-pos.y < nearest_dist) {
 								if(epp->norm.y>0)
-									nearest = po->room_2;
+									nearest = po.room_2;
 								else
-									nearest = po->room_1;
+									nearest = po.room_1;
 
 								nearest_dist = yy - pos.y;
 							}
@@ -609,7 +610,7 @@ long ARX_PORTALS_GetRoomNumForPosition(const Vec3f & pos,long flag) {
 	return num;
 }
 
-static void ARX_PORTALS_Frustrum_ClearIndexCount(long room_num) {
+static void ARX_PORTALS_Frustrum_ClearIndexCount(size_t room_num) {
 	
 	EERIE_ROOM_DATA & room = portals->rooms[room_num];
 	
@@ -1064,7 +1065,7 @@ static void RenderLava() {
 	vPolyLava.clear();
 }
 
-static void ARX_PORTALS_Frustrum_RenderRoomTCullSoft(long room_num,
+static void ARX_PORTALS_Frustrum_RenderRoomTCullSoft(size_t room_num,
                                                      const EERIE_FRUSTRUM_DATA & frustrums,
                                                      long now,
                                                      const Vec3f & camPos
@@ -1258,7 +1259,7 @@ static void ARX_PORTALS_Frustrum_RenderRoomTCullSoft(long room_num,
 }
 
 
-static void BackgroundRenderOpaque(long room_num) {
+static void BackgroundRenderOpaque(size_t room_num) {
 	
 	ARX_PROFILE_FUNC();
 	
@@ -1308,7 +1309,7 @@ static const BatchBucket transRenderOrder[] = {
 };
 
 
-static void BackgroundRenderTransparent(long room_num) {
+static void BackgroundRenderTransparent(size_t room_num) {
 	
 	ARX_PROFILE_FUNC();
 	

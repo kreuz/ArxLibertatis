@@ -100,7 +100,7 @@ const bool
 const float
 	hudScale = 0.5f;
 
-ActionKey actions[NUM_ACTION_KEY] = {
+const ActionKey actions[NUM_ACTION_KEY] = {
 	ActionKey(Keyboard::Key_Spacebar), // JUMP
 	ActionKey(Keyboard::Key_LeftCtrl, Keyboard::Key_RightCtrl), // MAGICMODE
 	ActionKey(Keyboard::Key_LeftShift, Keyboard::Key_RightShift), // STEALTHMODE
@@ -304,7 +304,7 @@ ActionKey ConfigReader::getActionKey(const std::string & section, ControlAction 
 	const IniKey * k0 = getKey(section, key + "_k0");
 	if(k0) {
 		InputKeyId id = Input::getKeyId(k0->getValue());
-		if(id == -1 && !k0->getValue().empty() && k0->getValue() != Input::KEY_NONE) {
+		if(id == ActionKey::UNUSED && !k0->getValue().empty() && k0->getValue() != Input::KEY_NONE) {
 			LogWarning << "Error parsing key name for " <<  key << "_k0: \"" << k0->getValue() << "\", resetting to \"" << Input::getKeyName(action_key.key[0]) << "\"";
 		} else {
 			action_key.key[0] = id;
@@ -314,7 +314,7 @@ ActionKey ConfigReader::getActionKey(const std::string & section, ControlAction 
 	const IniKey * k1 = getKey(section, key + "_k1");
 	if(k1) {
 		InputKeyId id = Input::getKeyId(k1->getValue());
-		if(id == -1 && !k1->getValue().empty() && k1->getValue() != Input::KEY_NONE) {
+		if(id == ActionKey::UNUSED && !k1->getValue().empty() && k1->getValue() != Input::KEY_NONE) {
 			LogWarning << "Error parsing key name for " <<  key << "_k1: \"" << k1->getValue() << "\", resetting to \"" << Input::getKeyName(action_key.key[1]) << "\"";
 		} else {
 			action_key.key[1] = id;
@@ -337,27 +337,20 @@ void Config::setDefaultActionKeys() {
 	}
 }
 
-void Config::setActionKey(ControlAction actionId, int index, InputKeyId key) {
+void Config::setActionKey(ControlAction actionId, size_t index, InputKeyId key) {
 	
-	if(actionId < 0 || (size_t)actionId >= NUM_ACTION_KEY || index > 1 || index < 0) {
+	if(actionId < 0 || actionId >= NUM_ACTION_KEY || index > 1) {
 		arx_assert(false);
 		return;
 	}
 	
 	ActionKey & action = actions[actionId];
-	
-	InputKeyId oldKey = action.key[index];
 	action.key[index] = key;
 	
 	int otherIndex = 1 - index;
 	
-	if(action.key[otherIndex] == -1) {
-		action.key[otherIndex] = oldKey;
-		oldKey = -1;
-	}
-	
 	if(action.key[otherIndex] == key) {
-		action.key[otherIndex] = -1;
+		action.key[otherIndex] = ActionKey::UNUSED;
 	}
 	
 	// remove double key assignments
@@ -369,8 +362,7 @@ void Config::setActionKey(ControlAction actionId, int index, InputKeyId key) {
 		
 		for(int k = 0; k < 2; k++) {
 			if(actions[i].key[k] == key) {
-				actions[i].key[k] = oldKey;
-				oldKey = -1;
+				actions[i].key[k] = ActionKey::UNUSED;
 			}
 		}
 		

@@ -625,7 +625,7 @@ static void AddFixedObjectHalo(const EERIE_FACE & face, const TransformInfo & t,
 	float mdist=ACTIVECAM->cdepth;
 	float ddist = mdist-fdist(t.pos, ACTIVECAM->orgTrans.pos);
 	ddist = ddist/mdist;
-	ddist = std::pow(ddist, 6);
+	ddist = glm::pow(ddist, 6.f);
 
 	ddist = glm::clamp(ddist, 0.25f, 0.9f);
 
@@ -939,7 +939,7 @@ static void PrepareAnimatedObjectHalo(HaloInfo & haloInfo, const Vec3f & pos,
 
 		float ddist = mdist-fdist(ftrPos, ACTIVECAM->orgTrans.pos);
 		ddist = ddist/mdist;
-		ddist = std::pow(ddist, 6);
+		ddist = glm::pow(ddist, 6.f);
 		ddist = glm::clamp(ddist, 0.25f, 0.9f);
 
 		haloInfo.ddist = ddist;
@@ -977,7 +977,7 @@ static void AddAnimatedObjectHalo(HaloInfo & haloInfo, const unsigned short * pa
 
 	for(size_t o = 0; o < 3; o++) {
 		float tttz	= glm::abs(eobj->vertexlist3[paf[o]].norm.z) * ( 1.0f / 2 );
-		float power = 255.f - (float)(255.f * tttz);
+		float power = 255.f - (255.f * tttz);
 		power *= (1.f - invisibility);
 
 		power = glm::clamp(power, 0.f, 255.f);
@@ -1186,50 +1186,51 @@ static void Cedric_AnimateDrawEntityRender(EERIE_3DOBJ * eobj, const Vec3f & pos
                                            Entity * io, float invisibility) {
 	
 	Skeleton *obj = eobj->m_skeleton;
-
+	
 	if(!obj)
 		return;
-
+	
 	ColorMod colorMod;
 	colorMod.updateFromEntity(io);
-
+	
 	/* Get nearest lights */
 	Vec3f tv = pos;
-
-	if(io && io->obj->fastaccess.head_group_origin != ObjVertHandle())
+	
+	if(io && io->obj->fastaccess.head_group_origin != ObjVertHandle()) {
 		tv.y = io->obj->vertexlist3[io->obj->fastaccess.head_group_origin.handleData()].v.y + 10;
-	else
+	} else {
 		tv.y -= 90.f;
-
+	}
+	
 	ShaderLight lights[llightsSize];
 	int lightsCount;
 	UpdateLlights(lights, lightsCount, tv, false);
-
+	
 	Cedric_ApplyLighting(lights, lightsCount, eobj, obj, colorMod);
-
+	
 	Cedric_RenderObject(eobj, obj, io, pos, invisibility);
-
+	
 	// Now we can render Linked Objects
 	for(size_t k = 0; k < eobj->linked.size(); k++) {
 		const EERIE_LINKED & link = eobj->linked[k];
-
+		
 		if(link.lgroup == ObjVertGroup() || !link.obj)
 			continue;
-
+		
 		// specific check to avoid drawing player weapon on its back when in subjective view
 		if(io == entities.player() &&
 			link.lidx == entities.player()->obj->fastaccess.weapon_attach &&
 			!EXTERNALVIEW
-		)
+		) {
 			continue;
-
-
+		}
+		
 		TransformInfo t(
 			actionPointPosition(eobj, link.lidx),
 			eobj->m_skeleton->bones[link.lgroup.handleData()].anim.quat,
 			link.io ? link.io->scale : 1.f,
 			link.obj->vertexlist[link.lidx2.handleData()].v - link.obj->vertexlist[link.obj->origin].v);
-
+		
 		DrawEERIEInter(link.obj, t, link.io, true, invisibility);
 	}
 }
@@ -1388,12 +1389,12 @@ static void Cedric_BlendAnimation(Skeleton & rig, AnimationBlendStatus * animBle
 	}
 
 	for(size_t i = 0; i < rig.bones.size(); i++) {
-		Bone * bone = &rig.bones[i];
+		Bone & bone = rig.bones[i];
 
-		bone->init.quat = Quat_Slerp(bone->last.quat, bone->init.quat, timm);
+		bone.init.quat = Quat_Slerp(bone.last.quat, bone.init.quat, timm);
 
-		bone->init.trans = bone->last.trans + (bone->init.trans - bone->last.trans) * timm;
-		bone->init.scale = bone->last.scale + (bone->init.scale - bone->last.scale) * timm;
+		bone.init.trans = bone.last.trans + (bone.init.trans - bone.last.trans) * timm;
+		bone.init.scale = bone.last.scale + (bone.init.scale - bone.last.scale) * timm;
 	}
 }
 
@@ -1403,32 +1404,33 @@ static void Cedric_BlendAnimation(Skeleton & rig, AnimationBlendStatus * animBle
 static void Cedric_ConcatenateTM(Skeleton & rig, const TransformInfo & t) {
 
 	for(size_t i = 0; i != rig.bones.size(); i++) {
-		Bone * bone = &rig.bones[i];
+		Bone & bone = rig.bones[i];
 
-		if(bone->father >= 0) { // Child Bones
-			Bone * parent = &rig.bones[bone->father];
+		if(bone.father >= 0) { // Child Bones
+			size_t parentIndex = size_t(bone.father);
+			Bone & parent = rig.bones[parentIndex];
 			// Rotation
-			bone->anim.quat = parent->anim.quat * bone->init.quat;
+			bone.anim.quat = parent.anim.quat * bone.init.quat;
 
 			// Translation
-			bone->anim.trans = bone->init.trans * parent->anim.scale;
-			bone->anim.trans = parent->anim.quat * bone->anim.trans;
-			bone->anim.trans = parent->anim.trans + bone->anim.trans;
+			bone.anim.trans = bone.init.trans * parent.anim.scale;
+			bone.anim.trans = parent.anim.quat * bone.anim.trans;
+			bone.anim.trans = parent.anim.trans + bone.anim.trans;
 
 			// Scale
-			bone->anim.scale = (bone->init.scale + Vec3f_ONE) * parent->anim.scale;
+			bone.anim.scale = (bone.init.scale + Vec3f_ONE) * parent.anim.scale;
 		} else { // Root Bone
 			// Rotation
-			bone->anim.quat = t.rotation * bone->init.quat;
+			bone.anim.quat = t.rotation * bone.init.quat;
 
 			// Translation
-			Vec3f vt1 = bone->init.trans + t.offset;
-			bone->anim.trans = t.rotation * vt1;
-			bone->anim.trans *= t.scale;
-			bone->anim.trans += t.pos;
+			Vec3f vt1 = bone.init.trans + t.offset;
+			bone.anim.trans = t.rotation * vt1;
+			bone.anim.trans *= t.scale;
+			bone.anim.trans += t.pos;
 
 			// Compute Global Object Scale AND Global Animation Scale
-			bone->anim.scale = (bone->init.scale + Vec3f_ONE) * t.scale;
+			bone.anim.scale = (bone.init.scale + Vec3f_ONE) * t.scale;
 		}
 	}
 }
@@ -1511,7 +1513,8 @@ static void Cedric_AnimateDrawEntity(Skeleton & skeleton, AnimLayer * animlayer,
 			ObjVertGroup i = extraRotation->group_number[k];
 
 			if(i != ObjVertGroup()) {
-				skeleton.bones[i.handleData()].init.quat = angleToQuatForExtraRotation(extraRotation->group_rotate[k]);
+				size_t boneIndex = size_t(i.handleData());
+				skeleton.bones[boneIndex].init.quat = angleToQuatForExtraRotation(extraRotation->group_rotate[k]);
 			}
 		}
 	}
@@ -1520,7 +1523,8 @@ static void Cedric_AnimateDrawEntity(Skeleton & skeleton, AnimLayer * animlayer,
 	Cedric_AnimateObject(&skeleton, animlayer);
 
 	if(extraScale.groupIndex != ObjVertGroup()) {
-		Bone & bone = skeleton.bones[extraScale.groupIndex.handleData()];
+		size_t boneIndex = size_t(extraScale.groupIndex.handleData());
+		Bone & bone = skeleton.bones[boneIndex];
 
 		bone.init.scale += extraScale.scale;
 	}

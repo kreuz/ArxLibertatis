@@ -43,6 +43,7 @@
 #cmakedefine01 ARX_HAVE_READ
 #cmakedefine01 ARX_HAVE_CLOSE
 #cmakedefine01 ARX_HAVE_ISATTY
+#cmakedefine01 ARX_HAVE_THREADSAFE_READDIR
 #cmakedefine01 ARX_HAVE_FPATHCONF
 #cmakedefine01 ARX_HAVE_PATHCONF
 #cmakedefine01 ARX_HAVE_NAME_MAX
@@ -69,8 +70,6 @@
 #cmakedefine01 ARX_HAVE_WORDEXP
 #cmakedefine01 ARX_HAVE_UNAME
 #cmakedefine01 ARX_HAVE_GETRUSAGE
-#cmakedefine01 ARX_HAVE_POPEN
-#cmakedefine01 ARX_HAVE_PCLOSE
 #cmakedefine01 ARX_HAVE_SYSCONF
 #cmakedefine01 ARX_HAVE_GETEXECNAME
 #cmakedefine01 ARX_HAVE_SYSCTL

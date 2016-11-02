@@ -29,20 +29,14 @@
 #include "savetool/SaveRename.h"
 #include "savetool/SaveView.h"
 
-using std::vector;
-using std::string;
-using std::cout;
-using std::endl;
-using std::cerr;
-
 static void print_help() {
-	cout << "usage: savetool <command> <savefile> [<options>...]" << endl;
-	cout << "commands are:" << endl;
-	cout << " - extract <savefile>" << endl;
-	cout << " - add <savefile> [<files>...]" << endl;
-	cout << " - fix <savefile>" << endl;
-	cout << " - rename <savefile> <newname>" << endl;
-	cout << " - view <savefile> [<ident>]" << endl;
+	std::cout << "usage: savetool <command> <savefile> [<options>...]\n"
+	             "commands are:\n"
+	             " - extract <savefile>\n"
+	             " - add <savefile> [<files>...]\n"
+	             " - fix <savefile>\n"
+	             " - rename <savefile> <newname>\n"
+	             " - view <savefile> [<ident>]\n";
 }
 
 static int main_extract(SaveBlock & save, int argc, char ** argv) {
@@ -57,26 +51,26 @@ static int main_extract(SaveBlock & save, int argc, char ** argv) {
 		return 2;
 	}
 	
-	vector<string> files = save.getFiles();
+	std::vector<std::string> files = save.getFiles();
 	
-	for(vector<string>::iterator file = files.begin(); file != files.end(); ++file) {
+	for(std::vector<std::string>::iterator file = files.begin(); file != files.end(); ++file) {
 		
 		size_t size;
 		char * data = save.load(*file, size);
 		if(!data) {
-			cerr << "error loading " << *file << " from save" << endl;
+			std::cerr << "error loading " << *file << " from save\n";
 			continue;
 		}
 		
 		fs::ofstream h(*file, std::ios_base::out | std::ios_base::binary);
 		if(!h.is_open()) {
-			cerr << "error opening " << *file << " for writing" << endl;
+			std::cerr << "error opening " << *file << " for writing\n";
 			free(data);
 			continue;
 		}
 		
 		if(h.write(data, size).fail()) {
-			cerr << "error writing to " << *file << endl;
+			std::cerr << "error writing to " << *file << '\n';
 		}
 		
 		free(data);
@@ -97,17 +91,17 @@ static int main_add(SaveBlock & save, int argc, char ** argv) {
 		char * data = fs::read_file(argv[i], size);
 		
 		if(!data) {
-			cerr << "error loading " << argv[i];
+			std::cerr << "error loading " << argv[i];
 		} else {
 			
-			string name = argv[i];
+			std::string name = argv[i];
 			size_t pos = name.find_last_of("/\\");
-			if(pos != string::npos) {
+			if(pos != std::string::npos) {
 				name = name.substr(pos + 1);
 			}
 			
 			if(!save.save(name, data, size)) {
-				cerr << "error writing " << name << " to save";
+				std::cerr << "error writing " << name << " to save";
 			}
 			
 			delete[] data;
@@ -129,7 +123,7 @@ int utf8_main(int argc, char ** argv) {
 		return 1;
 	}
 	
-	string command = argv[1];
+	std::string command = argv[1];
 	
 	fs::path savefile = argv[2];
 	

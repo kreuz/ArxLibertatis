@@ -75,7 +75,7 @@ void CheatDrawText() {
 	
 	PlatformDuration elapsed = g_platformTime.frameStart() - sp_max_start;
 
-	if(sp_max_start != PlatformInstant_ZERO && elapsed < PlatformDurationMs(20000)) {
+	if(elapsed < PlatformDurationMs(20000)) {
 		float modi = float(toMs(PlatformDurationMs(20000) - elapsed)) * ( 1.0f / 2000 ) * ( 1.0f / 10 );
 		float sizX = 16;
 		
@@ -85,7 +85,7 @@ void CheatDrawText() {
 		for(size_t i = 0; i < sp_max_ch.length(); i++) {
 			Vec2f d = p + Vec2f(sizX * i, sp_max_y[i]);
 			
-			sp_max_y[i] = std::sin(d.x + arxtime.now_f() * ( 1.0f / 100 )) * 30.f * modi;
+			sp_max_y[i] = std::sin(d.x + toMs(elapsed) * (1.0f / 100)) * 30.f * modi;
 			std::string tex(1, sp_max_ch[i]);
 
 			UNICODE_ARXDrawTextCenter(hFontInBook, d + Vec2f(-1,-1), tex, Color::none);

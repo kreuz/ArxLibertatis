@@ -825,26 +825,26 @@ void UpdateIORoom(Entity * io)
 }
 
 ROOM_DIST_DATA * RoomDistance = NULL;
-static long NbRoomDistance = 0;
+static size_t NbRoomDistance = 0;
 
-static void SetRoomDistance(long i, long j, float val, const Vec3f & p1, const Vec3f & p2) {
+static void SetRoomDistance(size_t i, size_t j, float val, const Vec3f & p1, const Vec3f & p2) {
 	
-	if(i < 0 || j < 0 || i >= NbRoomDistance || j >= NbRoomDistance || !RoomDistance)
+	if(i >= NbRoomDistance || j >= NbRoomDistance || !RoomDistance)
 		return;
 	
-	long offs = i + j * NbRoomDistance;
+	size_t offs = i + j * NbRoomDistance;
 	
 	RoomDistance[offs].startpos = p1;
 	RoomDistance[offs].endpos = p2;
 	RoomDistance[offs].distance = val;
 }
 
-static float GetRoomDistance(long i, long j, Vec3f & p1, Vec3f & p2)
+static float GetRoomDistance(size_t i, size_t j, Vec3f & p1, Vec3f & p2)
 {
-	if(i < 0 || j < 0 || i >= NbRoomDistance || j >= NbRoomDistance)
+	if(i >= NbRoomDistance || j >= NbRoomDistance)
 		return -1.f;
 
-	long offs = i + j * NbRoomDistance;
+	size_t offs = i + j * NbRoomDistance;
 
 	p1 = RoomDistance[offs].startpos;
 	p2 = RoomDistance[offs].endpos;
@@ -866,8 +866,14 @@ float SP_GetRoomDist(const Vec3f & pos, const Vec3f & c_pos, long io_room, long 
 
 	if(Room >= 0) {
 		Vec3f p1, p2;
-		float v = GetRoomDistance(Cam_Room, Room, p1, p2);
-
+		
+		float v;
+		if(Cam_Room < 0 || Room < 0) {
+			v = -1.f;
+		} else {
+			v = GetRoomDistance(size_t(Cam_Room), size_t(Room), p1, p2);
+		}
+		
 		if(v > 0.f) {
 			v += fdist(pos, p2);
 			v += fdist(c_pos, p1);
@@ -1568,8 +1574,9 @@ static bool loadFastScene(const res::path & file, const char * data, const char 
 		                                        * NbRoomDistance * NbRoomDistance);
 		LogDebug("FTS: loading " << (NbRoomDistance * NbRoomDistance)
 		         << " room distances ...");
-		for(long n = 0; n < NbRoomDistance; n++) {
-			for(long m = 0; m < NbRoomDistance; m++) {
+		
+		for(size_t n = 0; n < NbRoomDistance; n++) {
+			for(size_t m = 0; m < NbRoomDistance; m++) {
 				const ROOM_DIST_DATA_SAVE * rdds;
 				rdds = fts_read<ROOM_DIST_DATA_SAVE>(data, end);
 				Vec3f start = rdds->startpos.toVec3();
@@ -1654,18 +1661,18 @@ static void ComputeRoomDistance() {
 	RoomDistance =
 		(ROOM_DIST_DATA *)malloc(sizeof(ROOM_DIST_DATA) * (NbRoomDistance) * (NbRoomDistance));
 
-	for (long n = 0; n < NbRoomDistance; n++)
-		for (long m = 0; m < NbRoomDistance; m++)
+	for (size_t n = 0; n < NbRoomDistance; n++)
+		for (size_t m = 0; m < NbRoomDistance; m++)
 			SetRoomDistance(m, n, -1, Vec3f_ZERO, Vec3f_ZERO);
 
-	long nb_anchors = NbRoomDistance + (portals->portals.size() * 9);
+	const size_t nb_anchors = NbRoomDistance + (portals->portals.size() * 9);
 	
 	std::vector<ANCHOR_DATA> ad;
 	ad.resize(nb_anchors);
 
 	std::vector<EERIE_PORTALS *> ptr(nb_anchors, static_cast<EERIE_PORTALS *>(NULL));
 	
-	for(long i = 0; i < NbRoomDistance; i++) {
+	for(size_t i = 0; i < NbRoomDistance; i++) {
 		
 		if(portals->rooms[i].nb_polys > 0) {
 			ad[i].pos = GetRoomCenter(i);
@@ -1674,7 +1681,7 @@ static void ComputeRoomDistance() {
 		ptr[i] = (EERIE_PORTALS *)&portals->rooms[i]; // FIXME mixing of pointer types
 	}
 
-	long curpos = NbRoomDistance;
+	size_t curpos = NbRoomDistance;
 
 	for(size_t i = 0; i < portals->portals.size(); i++) {
 		// Add 4 portal vertices
@@ -1702,7 +1709,7 @@ static void ComputeRoomDistance() {
 	for(size_t i = 0; i < portals->rooms.size(); i++) {
 		for(size_t j = 0; j < portals->portals.size(); j++) {
 			if(portals->portals[j].room_1 == i || portals->portals[j].room_2 == i) {
-				for(long tt = 0; tt < nb_anchors; tt++) {
+				for(size_t tt = 0; tt < nb_anchors; tt++) {
 
 					if(ptr[tt] == &portals->portals[j]) {
 						AddAData(&ad[tt], i);
@@ -1723,7 +1730,7 @@ static void ComputeRoomDistance() {
 						long p1 = -1;
 						long p2 = -1;
 
-						for(long tt = 0; tt < nb_anchors; tt++) {
+						for(size_t tt = 0; tt < nb_anchors; tt++) {
 							if(ptr[tt] == &portals->portals[jj])
 								p1 = tt;
 
@@ -1743,8 +1750,8 @@ static void ComputeRoomDistance() {
 
 	PathFinder pathfinder(NbRoomDistance, ad.data(), 0, NULL);
 
-	for(int i = 0; i < NbRoomDistance; i++) {
-		for(long j = 0; j < NbRoomDistance; j++) {
+	for(size_t i = 0; i < NbRoomDistance; i++) {
+		for(size_t j = 0; j < NbRoomDistance; j++) {
 			if(i == j) {
 				SetRoomDistance(i, j, -1, Vec3f_ZERO, Vec3f_ZERO);
 				continue;
@@ -1781,7 +1788,7 @@ static void ComputeRoomDistance() {
 	}
 
 	// Release our temporary Pathfinder data
-	for(int ii = 0; ii < nb_anchors; ii++) {
+	for(size_t ii = 0; ii < nb_anchors; ii++) {
 		if(ad[ii].nblinked) {
 			free(ad[ii].linked);
 		}
@@ -2327,8 +2334,8 @@ static bool FastSceneSave(const fs::path & partial_path) {
 	}
 	
 	if(portals && RoomDistance && NbRoomDistance > 0) {
-		for(long n = 0; n < NbRoomDistance; n++) {
-			for(long m = 0; m < NbRoomDistance; m++) {
+		for(size_t n = 0; n < NbRoomDistance; n++) {
+			for(size_t m = 0; m < NbRoomDistance; m++) {
 				ROOM_DIST_DATA_SAVE * rdds = reinterpret_cast<ROOM_DIST_DATA_SAVE *>(dat + pos);
 				pos += sizeof(ROOM_DIST_DATA_SAVE);
 				Vec3f start;

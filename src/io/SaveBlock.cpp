@@ -45,7 +45,9 @@ ZeniMax Media Inc., Suite 120, Rockville, Maryland 20850 USA.
 
 #include <cstdlib>
 
+#include <boost/foreach.hpp>
 #include <boost/algorithm/string/case_conv.hpp>
+#include <boost/range/adaptor/map.hpp>
 
 #include <zlib.h>
 
@@ -420,59 +422,89 @@ bool SaveBlock::defragment() {
 	
 	fs::ofstream tempFile(tempFileName, fs::fstream::out | fs::fstream::binary | fs::fstream::trunc);
 	if(!tempFile.is_open()) {
+		LogWarning << "Could not open temporary save file for defragmenting: " << tempFileName;
 		return false;
 	}
 	
-	totalSize = 0;
 	tempFile.seekp(4);
 	
-	for(Files::iterator file = files.begin(); file != files.end(); ++file) {
+	#ifdef ARX_DEBUG
+	size_t checkTotalSize = 0;
+	#endif
+	std::vector<char> buffer;
+	BOOST_FOREACH(const File & file, files | boost::adaptors::map_values) {
 		
-		if(file->second.storedSize == 0) {
+		if(file.storedSize == 0) {
 			continue;
 		}
 		
-		char * buf = new char[file->second.storedSize];
-		char * p = buf;
+		buffer.resize(file.storedSize);
+		char * p = &buffer.front();
 		
-		for(File::ChunkList::iterator chunk = file->second.chunks.begin();
-		    chunk != file->second.chunks.end(); ++chunk) {
-			handle.seekg(chunk->offset + 4);
-			handle.read(p, chunk->size);
-			p += chunk->size;
+		BOOST_FOREACH(const File::Chunk & chunk, file.chunks) {
+			handle.seekg(chunk.offset + 4);
+			handle.read(p, chunk.size);
+			p += chunk.size;
 		}
 		
-		arx_assert(p == buf + file->second.storedSize);
+		arx_assert(p == &buffer.front() + file.storedSize);
 		
-		tempFile.write(buf, file->second.storedSize);
+		if(!tempFile.write(&buffer.front(), file.storedSize)) {
+			break;
+		}
 		
-		file->second.chunks.resize(1);
-		file->second.chunks.front().offset = totalSize;
-		file->second.chunks.front().size = file->second.storedSize;
-		
-		delete[] buf;
-		
-		totalSize += file->second.storedSize;
+		#ifdef ARX_DEBUG
+		checkTotalSize += file.storedSize;
+		#endif
 	}
 	
-	usedSize = totalSize, chunkCount = files.size();
-	
-	if(tempFile.fail()) {
+	if(!tempFile) {
+		tempFile.close();
 		fs::remove(tempFileName);
-		handle.close(), files.clear();
-		LogWarning << "Defragmenting failed: " << tempFileName;
+		LogWarning << "Failed to write defragmented save file: " << tempFileName;
 		return false;
 	}
 	
 	tempFile.flush(), tempFile.close(), handle.close();
 	
-	if(!fs::rename(tempFileName, savefile, true)) {
-		LogWarning << "Failed to move defragmented savegame " << tempFileName << " to " << savefile;
+	bool renamed = fs::rename(tempFileName, savefile, true);
+	if(!renamed) {
+		fs::remove(tempFileName);
+		LogWarning << "Failed to move defragmented save file " << tempFileName << " to " << savefile;
+	} else {
+		
+		size_t newTotalSize = 0;
+		for(Files::iterator i = files.begin(); i != files.end(); ++i) {
+			File & file = i->second;
+			if(file.storedSize != 0) {
+				file.chunks.resize(1);
+				file.chunks.front().offset = newTotalSize;
+				file.chunks.front().size = file.storedSize;
+				newTotalSize += file.storedSize;
+			}
+		}
+		arx_assert(checkTotalSize == newTotalSize);
+		
+		usedSize = totalSize = newTotalSize;
+		chunkCount = files.size();
+		
+	}
+	
+	handle.open(savefile, fs::fstream::in | fs::fstream::out | fs::fstream::binary | fs::fstream::ate);
+	if(!handle.is_open()) {
+		files.clear();
+		LogError << "Failed to open defragmented save file: " << savefile;
 		return false;
 	}
 	
-	handle.open(savefile, fs::fstream::in | fs::fstream::out | fs::fstream::binary);
-	return handle.is_open();
+	if(handle.tellg() < fs::fstream::pos_type(totalSize + 4)) {
+		files.clear();
+		handle.close();
+		LogError << "Save file corrupted after defragmenting: " << savefile;
+		return false;
+	}
+	
+	return renamed;
 }
 
 bool SaveBlock::save(const std::string & name, const char * data, size_t size) {
